@@ -22,16 +22,17 @@ export function StartScreen({ canResume, onStart, onResume, onRules }: StartScre
   const [mode, setMode] = useState<Mode>('ai');
   const [aiLevel, setAiLevel] = useState<AiLevel>('normal');
   const [start, setStart] = useState<Player | 'random'>('random');
-  const [motive, setMotive] = useState(true);
-  const [wildcards, setWildcards] = useState(true);
+  // Optional rules from the rulebook; all off by default (standard game).
+  const [noMotive, setNoMotive] = useState(false);
+  const [noWildcards, setNoWildcards] = useState(false);
 
   const first = mode === 'ai' ? ['You', 'The computer'] : ['Player 1', 'Player 2'];
 
   return (
     <main className="start">
       <div className="start__crest" aria-hidden="true">
-        {HOUSES.map((arms) => (
-          <Shield key={arms.name} arms={arms} />
+        {HOUSES.map((arms, i) => (
+          <Shield key={i} arms={arms} />
         ))}
       </div>
       <h1 className="start__title">Vassal</h1>
@@ -41,7 +42,12 @@ export function StartScreen({ canResume, onStart, onResume, onRules }: StartScre
         className="start__form"
         onSubmit={(e) => {
           e.preventDefault();
-          onStart({ mode, aiLevel, start, config: { motive, wildcards } });
+          onStart({
+            mode,
+            aiLevel,
+            start,
+            config: { motive: !noMotive, wildcards: !noWildcards },
+          });
         }}
       >
         <fieldset className="choice">
@@ -101,19 +107,23 @@ export function StartScreen({ canResume, onStart, onResume, onRules }: StartScre
         <details className="variants">
           <summary>Variants</summary>
           <label className="toggle">
-            <input type="checkbox" checked={motive} onChange={(e) => setMotive(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={noMotive}
+              onChange={(e) => setNoMotive(e.target.checked)}
+            />
             <span>
-              Motive tier <small>Untick for the five-tier game, as in Battle Line</small>
+              No Motive tier <small>Five tiers instead of six, as in Battle Line</small>
             </span>
           </label>
           <label className="toggle">
             <input
               type="checkbox"
-              checked={wildcards}
-              onChange={(e) => setWildcards(e.target.checked)}
+              checked={noWildcards}
+              onChange={(e) => setNoWildcards(e.target.checked)}
             />
             <span>
-              Jokers <small>Untick to play without wildcards (7-card hands)</small>
+              No wildcards <small>Play without jokers, with 7-card hands</small>
             </span>
           </label>
         </details>

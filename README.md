@@ -7,6 +7,8 @@ noble houses, or **3 adjacent** ones, by forming stronger three-card alliances t
 - Play against the computer (three difficulty levels) or against a friend on the same device (hot-seat).
 - Optional variants from the rulebook: _No Motive tier_ and _No wildcards_.
 - Works on desktop and phones, with keyboard play (arrows / Enter / 1–9 / Esc).
+- Hands and alliances are kept sorted (rank, colour, suit); drawn cards fly in from the deck, and
+  clicking the deck shows every card you have not seen yet.
 - Runs entirely in the browser; games are saved locally and can be resumed.
 
 Rules: [docs/rules.md](docs/rules.md) (transcribed from [the original PDF](docs/Vassal_1.0.pdf), with the

@@ -1,13 +1,16 @@
 import { LayoutGroup } from 'motion/react';
 import { useEffect, useState } from 'react';
-import { formatCard, WIN_HOUSES, type CardId } from '../../engine/index.ts';
+import { formatCard, type CardId, type Player } from '../../engine/index.ts';
 import { CardBack } from '../components/Card.tsx';
+import { Deck } from '../components/Deck.tsx';
 import { GameLog } from '../components/GameLog.tsx';
 import { Hand } from '../components/Hand.tsx';
 import { House } from '../components/House.tsx';
-import { useGame, type Session } from '../hooks/useGame.ts';
+import { UnseenCardsDialog } from '../components/UnseenCardsDialog.tsx';
+import { useGame, type Model, type Session } from '../hooks/useGame.ts';
 import { cardText } from '../describe.ts';
-import { houseName } from '../houses.ts';
+import { houseLabel } from '../houses.ts';
+import { TugOfWar } from '../components/TugOfWar.tsx';
 
 interface GameScreenProps {
   session: Session;
@@ -16,12 +19,63 @@ interface GameScreenProps {
   onNewGame: () => void;
 }
 
+/** How long the mover keeps seeing the table (and their new card) before the hot-seat hand-off. */
+const HAND_OFF_DELAY_MS = 1100;
+/** Pause before each card leaves the deck; the opening deal is staggered by the same amount. */
+const DEAL_STEP_MS = 80;
+
+/** One of the viewer's cards on its way from the deck to their hand. */
+type Arrival = { card: CardId };
+
+const arrivalLayoutId = (a: Arrival): string => `card-${a.card}`;
+
+/**
+ * Cards that should visibly travel from the deck right now: the opening hand the first time a player
+ * sees it, or the card the viewer just drew.
+ */
+function arrivalsFor(model: Model, viewer: Player, handHidden: boolean, hand: CardId[]): Arrival[] {
+  if (handHidden) return [];
+  const { mode, record } = model.session;
+  const moves = record.moves.length;
+  const firstLook = mode === 'ai' ? moves === 0 : moves === (viewer === record.start ? 0 : 1);
+  if (firstLook) return hand.map((card) => ({ card }));
+  return model.lastEvents.flatMap((e) =>
+    e.t === 'drew' && e.p === viewer && e.card !== null ? [{ card: e.card }] : [],
+  );
+}
+
 export function GameScreen({ session, onMenu, onRules, onNewGame }: GameScreenProps) {
   const game = useGame(session);
   const { model, view, viewer, opponent, names, thinking, humanToMove, play } = game;
   const { state } = model;
+  const moveCount = model.session.record.moves.length;
   const [selected, setSelected] = useState<CardId | null>(null);
   const [showResult, setShowResult] = useState(true);
+  const [deckOpen, setDeckOpen] = useState(false);
+
+  // Hot-seat hand-off: the mover first watches their move and draw land, then the screen is covered.
+  const [handOffShownAt, setHandOffShownAt] = useState(-1);
+  const moverStillLooking = model.awaitingPass && viewer !== state.active;
+  const handOffVisible = model.awaitingPass && (!moverStillLooking || handOffShownAt === moveCount);
+  useEffect(() => {
+    if (!moverStillLooking || handOffShownAt === moveCount) return;
+    const t = setTimeout(() => setHandOffShownAt(moveCount), HAND_OFF_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [moverStillLooking, handOffShownAt, moveCount]);
+  const handHidden = handOffVisible;
+
+  // Cards travelling from the deck are revealed one at a time.
+  const arrivals = arrivalsFor(model, viewer, handHidden, view.hand);
+  const arrivalKey = `${viewer}:${moveCount}:${handHidden}`;
+  const [reveal, setReveal] = useState({ key: '', count: 0 });
+  const revealed = reveal.key === arrivalKey ? reveal.count : 0;
+  const pending = arrivals.slice(revealed);
+  useEffect(() => {
+    if (pending.length === 0) return;
+    const t = setTimeout(() => setReveal({ key: arrivalKey, count: revealed + 1 }), DEAL_STEP_MS);
+    return () => clearTimeout(t);
+  }, [arrivalKey, revealed, pending.length]);
+  const pendingMine = new Set(pending.map((a) => a.card));
 
   // Drop a selection that is no longer in hand (after playing, or on a hot-seat hand-off).
   const selection =
@@ -49,7 +103,8 @@ export function GameScreen({ session, onMenu, onRules, onNewGame }: GameScreenPr
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  const owned = (p: number) => view.houses.filter((h) => h.claim?.by === p).length;
+  const won: [number, number] = [0, 0];
+  for (const h of view.houses) if (h.claim) won[h.claim.by]++;
   const result = state.result;
 
   let status: string;
@@ -66,7 +121,7 @@ export function GameScreen({ session, onMenu, onRules, onNewGame }: GameScreenPr
 
   const lastMoveText =
     model.lastPlayed && !result
-      ? `${names[state.active === 0 ? 1 : 0]} played ${cardText(model.lastPlayed.card)} to ${houseName(model.lastPlayed.house)}.`
+      ? `${names[state.active === 0 ? 1 : 0]} played ${cardText(model.lastPlayed.card)} to ${houseLabel(model.lastPlayed.house)}.`
       : '';
 
   return (
@@ -89,73 +144,76 @@ export function GameScreen({ session, onMenu, onRules, onNewGame }: GameScreenPr
       </header>
 
       <div className="game__layout">
-        <main className="table">
-          <div className="seat seat--opponent">
-            <span className="seat__name">{names[opponent]}</span>
-            <span
-              className="seat__score"
-              aria-label={`${names[opponent]} holds ${owned(opponent)} houses`}
-            >
-              {owned(opponent)}/{WIN_HOUSES}
-            </span>
-            <span className="seat__hand" aria-label={`${view.oppHandCount} cards in hand`}>
-              {Array.from({ length: view.oppHandCount }, (_, i) => (
-                <CardBack key={i} small />
-              ))}
-            </span>
-            <span className="seat__pile" title="Draw pile">
-              <CardBack small /> {view.pileCount}
-            </span>
-          </div>
-
-          <LayoutGroup>
-            <div className="board" aria-label="Noble houses">
-              {view.houses.map((house, i) => (
-                <House
-                  key={i}
-                  index={i}
-                  house={house}
-                  config={view.config}
-                  viewer={viewer}
-                  names={names}
-                  playable={selection !== null && house.sides[viewer].length < 3 ? selection : null}
-                  winning={!!result?.houses.includes(i)}
-                  lastPlayed={model.lastPlayed}
-                  onPlay={playTo}
-                />
-              ))}
-            </div>
-
-            <div className="seat seat--viewer">
-              <span className="seat__name">{names[viewer]}</span>
-              <span
-                className="seat__score"
-                aria-label={`${names[viewer]} holds ${owned(viewer)} houses`}
-              >
-                {owned(viewer)}/{WIN_HOUSES}
+        <LayoutGroup>
+          <main className="table">
+            <div className="seat seat--opponent">
+              <span className="seat__name" data-seat={opponent}>
+                {names[opponent]}
               </span>
             </div>
-            {model.awaitingPass ? (
-              <div className="hand hand--hidden" aria-hidden="true">
-                {view.hand.map((c) => (
-                  <CardBack key={c} />
+
+            <div className="arena">
+              <TugOfWar viewer={viewer} won={won} names={names} />
+              <div className="board" aria-label="Noble houses">
+                {view.houses.map((house, i) => (
+                  <House
+                    key={i}
+                    index={i}
+                    house={house}
+                    config={view.config}
+                    viewer={viewer}
+                    names={names}
+                    playable={
+                      selection !== null && house.sides[viewer].length < 3 ? selection : null
+                    }
+                    winning={!!result?.houses.includes(i)}
+                    lastPlayed={model.lastPlayed}
+                    onPlay={playTo}
+                  />
                 ))}
               </div>
-            ) : (
-              <Hand
-                cards={view.hand}
-                selected={selection}
-                enabled={humanToMove}
-                onSelect={setSelected}
-              />
-            )}
-          </LayoutGroup>
-        </main>
+            </div>
 
-        <GameLog log={model.log} viewer={viewer} />
+            <div className="tray">
+              <div className="seat seat--viewer">
+                <span className="seat__name" data-seat={viewer}>
+                  {names[viewer]}
+                </span>
+              </div>
+              <Deck
+                count={view.pileCount}
+                outgoing={pending.map(arrivalLayoutId)}
+                onOpen={() => setDeckOpen(true)}
+              />
+              {handHidden ? (
+                <div className="hand hand--hidden" aria-hidden="true">
+                  {view.hand.map((c) => (
+                    <CardBack key={c} />
+                  ))}
+                </div>
+              ) : (
+                <Hand
+                  cards={view.hand.filter((c) => !pendingMine.has(c))}
+                  selected={selection}
+                  enabled={humanToMove}
+                  onSelect={setSelected}
+                />
+              )}
+            </div>
+          </main>
+        </LayoutGroup>
+
+        <GameLog log={model.log} />
       </div>
 
-      {model.awaitingPass && (
+      <UnseenCardsDialog
+        open={deckOpen && !handHidden}
+        onClose={() => setDeckOpen(false)}
+        view={view}
+        opponentName={names[opponent]}
+      />
+
+      {handOffVisible && (
         <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="pass-title">
           <div className="overlay__panel">
             <h2 id="pass-title">Pass the device to {names[state.active]}</h2>

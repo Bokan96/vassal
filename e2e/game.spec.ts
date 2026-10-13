@@ -75,4 +75,74 @@ test('a full game against the easy computer ends with a winner', async ({ page }
   }
   await expect(result).toBeVisible();
   await expect(page.locator('.house.is-winning').first()).toBeVisible();
+  // Won houses are coloured by their winner.
+  await expect(page.locator('.house[data-seat]').first()).toBeVisible();
+});
+
+const RANKS = [
+  'Ace',
+  'Two',
+  'Three',
+  'Four',
+  'Five',
+  'Six',
+  'Seven',
+  'Eight',
+  'Nine',
+  'Ten',
+  'Jack',
+  'Queen',
+  'King',
+];
+const SUITS = ['Spades', 'Clubs', 'Hearts', 'Diamonds'];
+/** Sort key of an aria-label such as "Queen of Hearts": rank, then colour and suit; jokers last. */
+const sortKey = (label: string) => {
+  if (label === 'Joker') return 1000;
+  const [rank, , suit] = label.split(' ');
+  return RANKS.indexOf(rank!) * 4 + SUITS.indexOf(suit!);
+};
+
+test('keeps the hand sorted by rank, colour and suit', async ({ page }) => {
+  await startGame(page, { first: /^You$/ });
+  await expect(handCards(page)).toHaveCount(7);
+  for (let i = 0; i < 3; i++) {
+    const labels = await handCards(page).evaluateAll((els) =>
+      els.map((e) => e.getAttribute('aria-label') ?? ''),
+    );
+    const keys = labels.map(sortKey);
+    expect(keys).toEqual([...keys].sort((a, b) => a - b));
+    await playFirstCard(page);
+    await expect(handCards(page)).toHaveCount(7);
+  }
+});
+
+test('the deck shows every card not on the table or in your hand', async ({ page }) => {
+  await startGame(page, { first: /^You$/ });
+  await expect(handCards(page)).toHaveCount(7);
+  await page.getByRole('button', { name: /Draw pile, 40 cards/ }).click();
+  const dialog = page.getByRole('dialog', { name: 'Unseen cards (47)' });
+  await expect(dialog).toBeVisible();
+  // 46 naturals are shown face up; the opponent's joker is mentioned below the grid.
+  await expect(dialog.locator('.mini-card:not(.is-gone)')).toHaveCount(46);
+  await expect(dialog).toContainText('The opponent still holds their Joker.');
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toBeHidden();
+});
+
+test('offers the optional variants switched off, so the standard game is the default', async ({
+  page,
+}) => {
+  await page.goto('/?seed=7&fast=1');
+  await page.getByText('Variants').click();
+  await expect(page.getByRole('checkbox', { name: /No Motive tier/ })).not.toBeChecked();
+  await expect(page.getByRole('checkbox', { name: /No wildcards/ })).not.toBeChecked();
+});
+
+test('shows a level tug-of-war bar and no house names at the start', async ({ page }) => {
+  await startGame(page, { first: /^You$/ });
+  const meter = page.getByRole('meter', { name: 'Houses won' });
+  await expect(meter).toHaveAttribute('aria-valuenow', '0');
+  await expect(meter).toHaveAttribute('aria-valuetext', 'Level, 0 houses each');
+  await expect(page.locator('.house__tier').filter({ hasText: /\d\/3/ })).toHaveCount(0);
+  await expect(page.locator('.seat--opponent .card-back')).toHaveCount(0);
 });

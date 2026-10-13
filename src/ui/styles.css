@@ -6,6 +6,9 @@
   --gold: #c9a54c;
   --gold-bright: #e6c873;
   --steel: #93abc4;
+  /* Player colours: player 1 (seat 0) is gold, player 2 / the computer (seat 1) is steel. */
+  --seat-0: #d9b45a;
+  --seat-1: #93abc4;
   --text: #ece4cf;
   --muted: #a9a28d;
   --card: #f8f2e2;
@@ -24,6 +27,8 @@
   --board-w: 54px;
   --board-h: 74px;
   --shield: 46px;
+  --deck-w: 64px;
+  --deck-h: 90px;
   color-scheme: dark;
 }
 
@@ -67,6 +72,13 @@ button {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+[data-seat='0'] {
+  --seat: var(--seat-0);
+}
+[data-seat='1'] {
+  --seat: var(--seat-1);
 }
 
 /* ---------- Buttons ---------- */
@@ -306,34 +318,8 @@ button {
   font-size: 0.85rem;
   text-transform: uppercase;
 }
-.seat--opponent .seat__name {
-  color: var(--steel);
-}
-.seat--viewer .seat__name {
-  color: var(--gold-bright);
-}
-.seat__score {
-  padding: 1px 10px;
-  border-radius: 999px;
-  border: 1px solid currentColor;
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-.seat__hand {
-  display: flex;
-  margin-left: auto;
-}
-.seat__hand .card-back + .card-back {
-  margin-left: -12px;
-}
-.seat__pile {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--muted);
-  font-family: var(--font-display);
-  font-size: 0.85rem;
+.seat__name {
+  color: var(--seat, var(--text));
 }
 
 /* ---------- Cards ---------- */
@@ -463,6 +449,74 @@ button.card {
   border-radius: 3px;
 }
 
+/* ---------- Arena: tug-of-war bar beside the board ---------- */
+.arena {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+}
+
+/* ---------- Tug of war ---------- */
+.tug {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+.tug__end {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--seat);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--seat) 25%, transparent);
+}
+.tug__track {
+  position: relative;
+  width: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--top, var(--seat-1)) 70%, transparent),
+    rgb(255 255 255 / 0.08) 50%,
+    color-mix(in srgb, var(--bottom, var(--seat-0)) 70%, transparent)
+  );
+}
+.tug__tick {
+  position: absolute;
+  left: 50%;
+  width: 12px;
+  height: 1px;
+  transform: translate(-50%, -50%);
+  background: rgb(255 255 255 / 0.22);
+}
+.tug__tick--middle {
+  width: 20px;
+  height: 2px;
+  background: rgb(255 255 255 / 0.45);
+}
+.tug__marker {
+  position: absolute;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--seat, rgb(255 255 255 / 0.6));
+  background: color-mix(in srgb, var(--seat, var(--felt-3)) 85%, black);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.8rem;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.5);
+  transition: top 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.tug__marker:not([data-seat]) {
+  background: var(--felt-3);
+}
+
 /* ---------- Board ---------- */
 .board {
   display: grid;
@@ -538,18 +592,10 @@ button.card {
   height: auto;
   filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.5));
 }
-.house__name {
-  font-family: var(--font-display);
-  font-size: 0.62rem;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  white-space: nowrap;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 .house__number {
-  display: none;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  color: var(--muted);
 }
 .house__pledge {
   font-family: var(--font-display);
@@ -566,19 +612,17 @@ button.card {
 .house[data-claim='opponent'] .house__token {
   transform: translateY(-14px);
 }
-.house[data-claim='viewer'] .house__pledge {
-  background: var(--gold);
+/* A won house takes the winner's colour. */
+.house[data-seat] {
+  background: color-mix(in srgb, var(--seat) 24%, rgb(0 0 0 / 0.2));
+  border-color: color-mix(in srgb, var(--seat) 75%, transparent);
+}
+.house[data-seat] .house__pledge {
+  background: var(--seat);
   color: var(--ink);
 }
-.house[data-claim='opponent'] .house__pledge {
-  background: var(--steel);
-  color: var(--ink);
-}
-.house[data-claim='viewer'] {
-  background: color-mix(in srgb, var(--gold) 9%, rgb(0 0 0 / 0.14));
-}
-.house[data-claim='opponent'] {
-  background: color-mix(in srgb, var(--steel) 9%, rgb(0 0 0 / 0.14));
+.house[data-seat] .house__number {
+  color: var(--seat);
 }
 .house.is-playable {
   border-color: color-mix(in srgb, var(--gold) 60%, transparent);
@@ -598,6 +642,82 @@ button.card {
 .house.is-winning {
   border-color: var(--gold-bright);
   box-shadow: 0 0 24px color-mix(in srgb, var(--gold) 45%, transparent);
+}
+
+/* ---------- Tray: viewer seat, deck and hand ---------- */
+.tray {
+  display: grid;
+  grid-template-columns: calc(var(--deck-w) + 24px) minmax(0, 1fr) calc(var(--deck-w) + 24px);
+  grid-template-areas:
+    'seat seat seat'
+    'deck hand .';
+  align-items: end;
+  row-gap: 4px;
+}
+.tray > .seat {
+  grid-area: seat;
+}
+.tray > .deck {
+  grid-area: deck;
+}
+.tray > .hand {
+  grid-area: hand;
+}
+
+/* ---------- Deck ---------- */
+.deck {
+  display: flex;
+  justify-content: flex-start;
+  padding-bottom: 6px;
+}
+.deck__button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.deck__stack {
+  position: relative;
+  display: block;
+  width: var(--deck-w);
+  height: var(--deck-h);
+}
+.deck__card.card-back {
+  position: absolute;
+  inset: 0;
+  width: var(--deck-w);
+  height: var(--deck-h);
+}
+.deck__card:nth-child(2) {
+  transform: translate(-2px, -2px);
+}
+.deck__card:nth-child(3) {
+  transform: translate(-4px, -4px);
+}
+.deck__ghost {
+  z-index: 2;
+}
+.deck__empty {
+  position: absolute;
+  inset: 0;
+  border: 2px dashed rgb(255 255 255 / 0.18);
+  border-radius: 8px;
+}
+.deck__count {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.deck__button:hover .deck__card,
+.deck__button:focus-visible .deck__card {
+  box-shadow:
+    0 0 0 2px var(--gold),
+    0 4px 10px rgb(0 0 0 / 0.4);
 }
 
 /* ---------- Hand ---------- */
@@ -653,13 +773,9 @@ button.card {
 .log__entry--win {
   color: var(--text);
 }
-.log__entry--claim.is-viewer,
-.log__entry--win.is-viewer {
-  border-left-color: var(--gold);
-}
-.log__entry--claim.is-opponent,
-.log__entry--win.is-opponent {
-  border-left-color: var(--steel);
+.log__entry--claim,
+.log__entry--win {
+  border-left-color: var(--seat);
 }
 
 /* ---------- Overlays & dialogs ---------- */
@@ -777,6 +893,58 @@ button.card {
   color: var(--red);
 }
 
+/* ---------- Unseen cards ---------- */
+.unseen__body {
+  padding: 8px 22px 22px;
+}
+.unseen__summary,
+.unseen__joker {
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+.unseen__joker {
+  margin: 14px 0 0;
+}
+.unseen__grid {
+  display: grid;
+  gap: 6px;
+}
+.unseen__row {
+  display: grid;
+  grid-template-columns: 1.4em repeat(13, minmax(0, 1fr));
+  gap: 3px;
+  align-items: center;
+}
+.unseen__suit {
+  font-size: 1.3rem;
+  text-align: center;
+  color: var(--text);
+}
+.unseen__suit.is-red {
+  color: #e0626d;
+}
+.mini-card {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 5 / 7;
+  border-radius: 4px;
+  border: 1px solid var(--card-edge);
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(0.6rem, 2.6vw, 0.95rem);
+}
+.mini-card.is-red {
+  color: var(--red);
+}
+.mini-card.is-gone {
+  background: transparent;
+  border: 1px dashed rgb(255 255 255 / 0.12);
+  color: rgb(255 255 255 / 0.16);
+  font-weight: 500;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 1100px) {
   .game__layout {
@@ -796,6 +964,30 @@ button.card {
     --board-w: 30px;
     --board-h: 42px;
     --shield: 30px;
+    --deck-w: 30px;
+    --deck-h: 42px;
+  }
+  .arena {
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 6px;
+  }
+  .tug__marker {
+    width: 22px;
+    height: 22px;
+    font-size: 0.7rem;
+  }
+  .tray {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'seat deck'
+      'hand hand';
+    align-items: center;
+  }
+  .deck {
+    padding-bottom: 0;
+  }
+  .deck__button {
+    flex-direction: row;
   }
   body {
     font-size: 16px;
@@ -872,23 +1064,11 @@ button.card {
     flex-direction: row;
     gap: 4px;
   }
-  .house__name {
-    display: none;
-  }
   .house__number {
-    display: block;
-    font-family: var(--font-display);
     font-size: 0.75rem;
-    color: var(--muted);
   }
   .house__pledge {
     display: none;
-  }
-  .house[data-claim='viewer'] {
-    border-color: var(--gold);
-  }
-  .house[data-claim='opponent'] {
-    border-color: var(--steel);
   }
   .house[data-claim='viewer'] .house__token {
     transform: translateX(6px);
@@ -900,12 +1080,10 @@ button.card {
     gap: 5px;
     padding-top: 12px;
   }
-  .seat__hand .card-back + .card-back {
-    margin-left: -10px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .tug__marker,
   .house__token,
   .house,
   .button {

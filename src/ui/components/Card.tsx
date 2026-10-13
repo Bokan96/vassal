@@ -25,6 +25,9 @@ interface CardProps {
   onKeyDown?: (e: React.KeyboardEvent) => void;
 }
 
+/** Swift re-sorting and flights between deck, hand and board. */
+const LAYOUT = { type: 'spring', stiffness: 520, damping: 40, mass: 0.8 } as const;
+
 function Face({ card, size, jokerAs }: Pick<CardProps, 'card' | 'size' | 'jokerAs'>) {
   if (isJoker(card)) {
     return (
@@ -91,7 +94,7 @@ export function Card({
         tabIndex={tabIndex}
         onKeyDown={onKeyDown}
         animate={{ y: selected ? -14 : 0 }}
-        transition={{ type: 'spring', stiffness: 500, damping: 34 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 34, layout: LAYOUT }}
       >
         <Face card={card} size={size} jokerAs={jokerAs} />
       </motion.button>
@@ -105,13 +108,29 @@ export function Card({
       aria-label={label}
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+      transition={{ type: 'spring', stiffness: 420, damping: 32, layout: LAYOUT }}
     >
       <Face card={card} size={size} jokerAs={jokerAs} />
     </motion.div>
   );
 }
 
-export function CardBack({ small }: { small?: boolean }) {
-  return <div className={`card-back${small ? ' card-back--small' : ''}`} aria-hidden="true" />;
+export function CardBack({
+  small,
+  className = '',
+  layoutId,
+}: {
+  small?: boolean;
+  className?: string;
+  /** Lets a back fly between places (e.g. from the deck to the opponent's hand). */
+  layoutId?: string;
+}) {
+  return (
+    <motion.div
+      layoutId={layoutId}
+      transition={{ layout: LAYOUT }}
+      className={`card-back${small ? ' card-back--small' : ''} ${className}`.trim()}
+      aria-hidden="true"
+    />
+  );
 }

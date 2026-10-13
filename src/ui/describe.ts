@@ -12,7 +12,7 @@ import {
   type Player,
   type RulesConfig,
 } from '../engine/index.ts';
-import { houseName } from './houses.ts';
+import { houseLabel } from './houses.ts';
 
 /** A card as text for sentences: "7♥", or "the Joker". */
 export const cardText = (c: number): string => (isJoker(c) ? 'the Joker' : formatCard(c));
@@ -88,7 +88,7 @@ export function describeEvent(
         id,
         kind: 'play',
         player: e.p,
-        text: `${names[e.p]} played ${cardText(e.card)} to ${houseName(e.house)}`,
+        text: `${names[e.p]} played ${cardText(e.card)} to ${houseLabel(e.house)}`,
       };
     case 'drew':
       return null;
@@ -97,7 +97,7 @@ export function describeEvent(
         id,
         kind: 'claim',
         player: e.claim.by,
-        text: `${houseName(e.house)} pledges to ${names[e.claim.by]}: ${claimExplanation(
+        text: `${names[e.claim.by]} ${names[e.claim.by] === 'You' ? 'win' : 'wins'} ${houseLabel(e.house)}: ${claimExplanation(
           state.houses[e.house]!,
           state.config,
           names,
@@ -106,7 +106,7 @@ export function describeEvent(
     case 'won': {
       const how =
         e.result.reason === 'adjacent'
-          ? `three adjacent houses (${e.result.houses.map(houseName).join(', ')})`
+          ? `three adjacent houses (${e.result.houses[0]! + 1}–${e.result.houses.at(-1)! + 1})`
           : e.result.reason === 'five'
             ? `${e.result.houses.length} houses`
             : `a majority of houses (${e.result.houses.length})`;

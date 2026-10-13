@@ -1,6 +1,7 @@
 import {
   ALLIANCE_SIZE,
-  formatStrength,
+  compareCards,
+  formatTier,
   isJoker,
   resolveAlliance,
   type CardId,
@@ -10,7 +11,7 @@ import {
   type RulesConfig,
 } from '../../engine/index.ts';
 import { claimExplanation } from '../describe.ts';
-import { HOUSES } from '../houses.ts';
+import { HOUSES, houseLabel } from '../houses.ts';
 import { Card } from './Card.tsx';
 import { Shield } from './Shield.tsx';
 
@@ -44,10 +45,14 @@ function Side({
 }) {
   const full = cards.length === ALLIANCE_SIZE;
   const resolved = full ? resolveAlliance(cards, config) : null;
+  // Display order: rank, colour, suit; a joker in a full alliance sorts as the card it mirrors.
+  const sortKey = (c: CardId) =>
+    resolved && isJoker(c) && resolved.jokerAs !== null ? resolved.jokerAs : c;
+  const shown = [...cards].sort((a, b) => compareCards(sortKey(a), sortKey(b)));
   return (
     <div className={`house__side ${className}`} aria-label={label}>
       <div className="house__cards">
-        {cards.map((c) => (
+        {shown.map((c) => (
           <Card
             key={c}
             card={c}
@@ -60,9 +65,7 @@ function Side({
           <div key={`slot-${i}`} className="slot" aria-hidden="true" />
         ))}
       </div>
-      <div className={`house__tier${resolved ? '' : ' is-empty'}`}>
-        {resolved ? formatStrength(resolved.strength) : cards.length > 0 ? `${cards.length}/3` : ''}
-      </div>
+      <div className="house__tier">{resolved ? formatTier(resolved.strength, config) : ''}</div>
     </div>
   );
 }
@@ -79,18 +82,21 @@ export function House({
   onPlay,
 }: HouseProps) {
   const arms = HOUSES[index]!;
+  const label = houseLabel(index);
   const opponent: Player = viewer === 0 ? 1 : 0;
   const claim = house.claim;
-  const claimSide = claim ? (claim.by === viewer ? 'viewer' : 'opponent') : 'none';
   const fresh = lastPlayed?.house === index ? lastPlayed.card : null;
   const explanation = claim ? claimExplanation(house, config, names) : '';
   const mine = house.sides[viewer];
   const showSlot = playable !== null && mine.length < ALLIANCE_SIZE ? 1 : 0;
+  const whose = (p: Player) => (p === viewer && names[p] === 'You' ? 'Your' : `${names[p]}'s`);
 
   return (
     <div
       className={`house${playable !== null ? ' is-playable' : ''}${winning ? ' is-winning' : ''}`}
-      data-claim={claimSide}
+      // Which way the token leans (towards the winner) and whose colour the house takes.
+      data-claim={claim ? (claim.by === viewer ? 'viewer' : 'opponent') : 'none'}
+      data-seat={claim ? claim.by : undefined}
       data-testid={`house-${index}`}
     >
       <Side
@@ -99,17 +105,16 @@ export function House({
         config={config}
         lastPlayed={fresh}
         slots={0}
-        label={`${names[opponent]}'s cards at ${arms.name}`}
+        label={`${whose(opponent)} cards at ${label}`}
       />
-      <div className="house__token" title={explanation || arms.name}>
+      <div className="house__token" title={explanation || undefined}>
         <Shield arms={arms} />
-        <span className="house__name">{arms.name}</span>
         <span className="house__number" aria-hidden="true">
           {index + 1}
         </span>
         {claim && (
           <span className="house__pledge">
-            {claim.by === viewer ? names[viewer] : names[opponent]}
+            {names[claim.by]}
             {claim.reason === 'proof' ? ' · proof' : ''}
           </span>
         )}
@@ -120,18 +125,18 @@ export function House({
         config={config}
         lastPlayed={fresh}
         slots={showSlot}
-        label={`${names[viewer]}'s cards at ${arms.name}`}
+        label={`${whose(viewer)} cards at ${label}`}
       />
       {playable !== null && (
         <button
           type="button"
           className="house__hit"
           onClick={() => onPlay(index)}
-          aria-label={`Play to ${arms.name} (house ${index + 1})`}
+          aria-label={`Play to ${label}`}
         />
       )}
       {claim && (
-        <span className="sr-only">{`${arms.name} pledged to ${names[claim.by]}. ${explanation}`}</span>
+        <span className="sr-only">{`${names[claim.by]} won ${label}. ${explanation}`}</span>
       )}
     </div>
   );

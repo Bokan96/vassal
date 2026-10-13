@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import type { CardId } from '../../engine/index.ts';
+import { sortCards, type CardId } from '../../engine/index.ts';
 import { Card } from './Card.tsx';
 
 interface HandProps {
@@ -9,9 +9,13 @@ interface HandProps {
   onSelect: (card: CardId | null) => void;
 }
 
-/** The viewer's hand: a row of selectable cards with arrow-key navigation (roving tabindex). */
-export function Hand({ cards, selected, enabled, onSelect }: HandProps) {
+/**
+ * The viewer's hand, sorted by rank, colour and suit: a row of selectable cards with arrow-key
+ * navigation (roving tabindex).
+ */
+export function Hand({ cards: unsorted, selected, enabled, onSelect }: HandProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const cards = sortCards(unsorted);
   const focusIndex = Math.max(0, selected === null ? 0 : cards.indexOf(selected));
 
   const onKeyDown = (e: React.KeyboardEvent, i: number) => {
