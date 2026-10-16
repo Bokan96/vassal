@@ -91,12 +91,17 @@ describe('tablePool (C4)', () => {
 });
 
 describe('proveHouse', () => {
-  it('J-Q-K suited is claimable as soon as it is completed, even against an empty side', () => {
-    const state = makeState({ houses: { 0: { p0: 'J♠ Q♠ K♠' } } });
+  it('C4 + C14: K-K-K is claimable as soon as it is completed, even against an empty side', () => {
+    const state = makeState({ houses: { 0: { p0: 'K♠ K♥ K♦' } } });
     expect(proveHouse(state.houses, 0, 0, state.config)).toMatchObject({
       provable: true,
-      oppBest: makeStrength(Tier.Coup, 36),
+      oppBest: makeStrength(Tier.Triumvirate, 36),
     });
+  });
+
+  it('C14: a J-Q-K Coup is not provable while any Triumvirate is still possible', () => {
+    const state = makeState({ houses: { 0: { p0: 'J♠ Q♠ K♠' } } });
+    expect(proveHouse(state.houses, 0, 0, state.config)?.provable).toBe(false);
   });
 
   it('10-J-Q suited is not provable while J-Q-K of another suit is still possible', () => {
@@ -105,10 +110,11 @@ describe('proveHouse', () => {
   });
 
   it("uses the opponent's committed cards", () => {
-    const state = makeState({ houses: { 0: { p0: '10♠ J♠ Q♠', p1: '2♥' } } });
+    // 2♥ 5♣ can be neither a sequence, a Triumvirate nor one colour: Discord at best (joker as K).
+    const state = makeState({ houses: { 0: { p0: '10♠ J♠ Q♠', p1: '2♥ 5♣' } } });
     expect(proveHouse(state.houses, 0, 0, state.config)).toMatchObject({
       provable: true,
-      oppBest: makeStrength(Tier.Coup, 9),
+      oppBest: makeStrength(Tier.Discord, 20),
     });
   });
 

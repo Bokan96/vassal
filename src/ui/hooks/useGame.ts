@@ -16,7 +16,8 @@ import {
   type Player,
   type RulesConfig,
 } from '../../engine/index.ts';
-import { describeEvent, type LogEntry } from '../describe.ts';
+import { logEntries, type LogEntry } from '../describe.ts';
+import type { Role } from '../i18n.ts';
 
 export type Mode = 'hotseat' | 'ai';
 
@@ -60,40 +61,30 @@ const STORAGE_KEY = 'vassal.session.v1';
 const params = new URLSearchParams(globalThis.location?.search ?? '');
 const FIXED_SEED = params.has('seed') ? Number(params.get('seed')) >>> 0 : null;
 /** `?fast=1` removes the AI's reading delay (used by end-to-end tests). */
-const FAST = params.get('fast') === '1';
+export const FAST = params.get('fast') === '1';
 const AI_MIN_DELAY_MS = FAST ? 0 : 650;
 const AI_BUDGET_MS: Record<AiLevel, number> = { random: 0, easy: 0, normal: 0, hard: 900 };
 
-export function playerNames(session: Session): [string, string] {
-  if (session.mode === 'hotseat') return ['Player 1', 'Player 2'];
-  const names: [string, string] = ['Opponent', 'Opponent'];
-  names[session.human] = 'You';
-  return names;
+/** Who each seat is for the reader: "you" and "opponent", or Player 1 and 2 in hot-seat. */
+export function playerRoles(session: Session): [Role, Role] {
+  if (session.mode === 'hotseat') return ['player1', 'player2'];
+  const roles: [Role, Role] = ['opponent', 'opponent'];
+  roles[session.human] = 'you';
+  return roles;
 }
 
-function appendLog(
-  log: LogEntry[],
-  events: GameEvent[],
-  state: GameState,
-  names: [string, string],
-): LogEntry[] {
-  const next = log.slice();
-  for (const e of events) {
-    const entry = describeEvent(e, state, names, next.length);
-    if (entry) next.push(entry);
-  }
-  return next;
+function appendLog(log: LogEntry[], events: GameEvent[], state: GameState): LogEntry[] {
+  return [...log, ...logEntries(events, state, log.length)];
 }
 
 /** Rebuild the model from a saved record, replaying every move. */
 function fromSession(session: Session): Model {
-  const names = playerNames(session);
   let state = newGame(session.record.config, session.record.seed, session.record.start);
   let log: LogEntry[] = [];
   for (const move of session.record.moves) {
     const r = applyMove(state, move);
     state = r.state;
-    log = appendLog(log, r.events, state, names);
+    log = appendLog(log, r.events, state);
   }
   const lastPlayed = session.record.moves.at(-1) ?? null;
   return {
@@ -119,7 +110,7 @@ function reducer(model: Model, action: Action): Model {
       return {
         session,
         state,
-        log: appendLog(model.log, events, state, playerNames(session)),
+        log: appendLog(model.log, events, state),
         awaitingPass: session.mode === 'hotseat' && !state.result,
         perspective: model.perspective,
         lastPlayed: action.move,
@@ -170,8 +161,11 @@ export function clearSavedSession(): void {
   }
 }
 
-/** Runs one game session: state, log, hot-seat hand-off and the AI opponent. */
-export function useGame(initial: Session) {
+/**
+ * Runs one game session: state, log, hot-seat hand-off and the AI opponent.
+ * While `hold` is true (the opening deal is still on screen) nobody may move.
+ */
+export function useGame(initial: Session, hold = false) {
   const [model, dispatch] = useReducer(reducer, initial, fromSession);
   const [thinking, setThinking] = useState(false);
   const workerRef = useRef<Worker | null>(null);
@@ -194,7 +188,7 @@ export function useGame(initial: Session) {
 
   // Let the AI move whenever it is its turn.
   useEffect(() => {
-    if (session.mode !== 'ai' || state.result || state.active === session.human) return;
+    if (hold || session.mode !== 'ai' || state.result || state.active === session.human) return;
     const id = ++requestId.current;
     const started = performance.now();
     const request: AiRequest = {
@@ -239,7 +233,7 @@ export function useGame(initial: Session) {
       clearTimeout(kickoff);
       if (timer) clearTimeout(timer);
     };
-  }, [state, session]);
+  }, [state, session, hold]);
 
   const play = useCallback((move: Move) => dispatch({ type: 'play', move }), []);
   const acknowledgePass = useCallback(() => dispatch({ type: 'acknowledge-pass' }), []);
@@ -247,6 +241,7 @@ export function useGame(initial: Session) {
   // Whose perspective the table is drawn from.
   const viewer = model.perspective;
   const humanToMove =
+    !hold &&
     !state.result &&
     !model.awaitingPass &&
     (session.mode === 'hotseat' || state.active === session.human);
@@ -256,7 +251,7 @@ export function useGame(initial: Session) {
     view: getPlayerView(state, viewer),
     viewer,
     opponent: other(viewer),
-    names: playerNames(session),
+    roles: playerRoles(session),
     thinking: thinking && !state.result,
     humanToMove,
     play,

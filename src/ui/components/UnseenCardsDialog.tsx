@@ -1,27 +1,27 @@
 import { useEffect, useRef } from 'react';
 import {
   cardId,
-  cardName,
   jokerOf,
   RANK_LABELS,
-  SUIT_NAMES,
   SUIT_SYMBOLS,
   type CardId,
   type PlayerView,
 } from '../../engine/index.ts';
+import { useI18n, type Role } from '../i18n.ts';
 
 interface UnseenCardsDialogProps {
   open: boolean;
   onClose: () => void;
   view: PlayerView;
-  opponentName: string;
+  opponent: Role;
 }
 
 /**
  * The cards the viewer has not seen: everything except the cards on the table and in their own
  * hand. They are in the draw pile or in the opponent's hand.
  */
-export function UnseenCardsDialog({ open, onClose, view, opponentName }: UnseenCardsDialogProps) {
+export function UnseenCardsDialog({ open, onClose, view, opponent }: UnseenCardsDialogProps) {
+  const { t } = useI18n();
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = ref.current;
@@ -40,20 +40,23 @@ export function UnseenCardsDialog({ open, onClose, view, opponentName }: UnseenC
   return (
     <dialog ref={ref} className="dialog unseen" onClose={onClose} aria-labelledby="unseen-title">
       <header className="dialog__header">
-        <h2 id="unseen-title">Unseen cards ({unseen})</h2>
-        <button type="button" className="icon-button" onClick={onClose} aria-label="Close">
+        <h2 id="unseen-title">{t.unseenTitle(unseen)}</h2>
+        <button type="button" className="icon-button" onClick={onClose} aria-label={t.close}>
           ✕
         </button>
       </header>
       <div className="unseen__body">
         <p className="unseen__summary">
-          Every card that is not on the table or in your hand: {view.pileCount} in the draw pile and{' '}
-          {view.oppHandCount} in{' '}
-          {opponentName === 'Opponent' ? "the opponent's" : `${opponentName}'s`} hand.
+          {t.unseenSummary(view.pileCount, view.oppHandCount, opponent)}
         </p>
         <div className="unseen__grid" role="list">
           {SUIT_SYMBOLS.map((symbol, suit) => (
-            <div key={symbol} className="unseen__row" role="listitem" aria-label={SUIT_NAMES[suit]}>
+            <div
+              key={symbol}
+              className="unseen__row"
+              role="listitem"
+              aria-label={t.suitNames[suit]}
+            >
               <span className={`unseen__suit${suit >= 2 ? ' is-red' : ''}`} aria-hidden="true">
                 {symbol}
               </span>
@@ -64,7 +67,7 @@ export function UnseenCardsDialog({ open, onClose, view, opponentName }: UnseenC
                   <span
                     key={rank}
                     className={`mini-card${suit >= 2 ? ' is-red' : ''}${gone ? ' is-gone' : ''}`}
-                    aria-label={gone ? undefined : cardName(c)}
+                    aria-label={gone ? undefined : t.cardName(c)}
                     aria-hidden={gone || undefined}
                     role={gone ? undefined : 'img'}
                   >
@@ -77,9 +80,7 @@ export function UnseenCardsDialog({ open, onClose, view, opponentName }: UnseenC
         </div>
         {view.config.wildcards && (
           <p className="unseen__joker">
-            {unseenJoker
-              ? `${opponentName === 'Opponent' ? 'The opponent' : opponentName} still holds their Joker.`
-              : `${opponentName === 'Opponent' ? "The opponent's" : `${opponentName}'s`} Joker has been played.`}
+            {unseenJoker ? t.jokerHeld(opponent) : t.jokerPlayed(opponent)}
           </p>
         )}
       </div>

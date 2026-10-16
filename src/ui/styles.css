@@ -21,14 +21,16 @@
   --font-body: 'EB Garamond', Garamond, Georgia, serif;
   --gutter: 16px;
 
-  /* Card sizes (overridden on small screens). */
-  --hand-w: 76px;
-  --hand-h: 106px;
-  --board-w: 54px;
-  --board-h: 74px;
-  --shield: 46px;
-  --deck-w: 64px;
-  --deck-h: 90px;
+  /* Card sizes follow the window (width and height) so the table always fits on screen. */
+  --board-w: clamp(30px, min(6vh, calc((100vw - 360px) / 9 - 12px)), 54px);
+  --board-h: calc(var(--board-w) * 1.37);
+  --hand-h: clamp(70px, 11.5vh, 106px);
+  --hand-w: calc(var(--hand-h) * 0.72);
+  --shield: clamp(32px, 5vh, 46px);
+  --deck-h: clamp(60px, 9.5vh, 90px);
+  --deck-w: calc(var(--deck-h) * 0.71);
+  /* Tutorial highlights. */
+  --spot: #ff5257;
   color-scheme: dark;
 }
 
@@ -131,6 +133,14 @@ button {
   color: var(--muted);
   cursor: pointer;
 }
+.sound-toggle {
+  display: grid;
+  place-items: center;
+}
+.sound-toggle svg {
+  width: 22px;
+  height: 22px;
+}
 .icon-button:hover {
   color: var(--text);
   background: rgb(255 255 255 / 0.06);
@@ -139,8 +149,12 @@ button {
 /* ---------- Start screen ---------- */
 .start {
   max-width: 560px;
+  min-height: 100dvh;
   margin: 0 auto;
-  padding: 40px var(--gutter) 56px;
+  padding: 28px var(--gutter) 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   text-align: center;
 }
 .start__crest {
@@ -191,9 +205,11 @@ button {
   color: var(--gold);
 }
 .choice__option {
-  flex: 1 1 140px;
+  flex: 1 1 90px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   min-height: 48px;
   padding: 10px 14px;
   border: 1px solid rgb(255 255 255 / 0.12);
@@ -255,11 +271,91 @@ button {
   margin-top: 6px;
 }
 
+/* Language flags (top right of the menu). */
+.start__lang {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+  margin: -24px 0 8px;
+}
+.lang-switch {
+  display: flex;
+  gap: 8px;
+}
+.lang-switch__flag {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 32px;
+  padding: 3px;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 6px;
+  background: rgb(0 0 0 / 0.2);
+  cursor: pointer;
+  opacity: 0.55;
+  transition:
+    opacity 0.15s,
+    border-color 0.15s;
+}
+.lang-switch__flag svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+}
+.lang-switch__flag:hover {
+  opacity: 0.85;
+}
+.lang-switch__flag.is-active {
+  opacity: 1;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+
+/* Difficulty slider. */
+.level {
+  display: grid;
+  gap: 4px;
+}
+.level__current {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.level__current small {
+  color: var(--muted);
+  margin-left: 0.3em;
+}
+.level__range {
+  width: 100%;
+  margin: 6px 0 0;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+.level__ticks {
+  display: flex;
+  justify-content: space-between;
+}
+.level__tick {
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.level__tick.is-active {
+  color: var(--gold-bright);
+}
+
 /* ---------- Game shell ---------- */
 .game {
-  min-height: 100dvh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 .topbar {
   display: flex;
@@ -293,6 +389,7 @@ button {
 }
 .game__layout {
   flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 270px;
   gap: 0;
@@ -300,9 +397,37 @@ button {
 .table {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px var(--gutter) 18px;
+  gap: 8px;
+  padding: 10px var(--gutter) 12px;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* Side panel: combinations on top, the game log fills the rest. */
+.game__side {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid rgb(255 255 255 / 0.07);
+  background: rgb(0 0 0 / 0.16);
+}
+.game__combos {
+  padding: 12px var(--gutter) 4px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.07);
+}
+.game__combos .tiers th,
+.game__combos .tiers td {
+  padding: 3px 4px;
+  font-size: 0.9rem;
+}
+.game__combos .example span {
+  padding: 0 3px;
+}
+.only-phone {
+  display: none;
+}
+.label-icon {
+  display: none;
 }
 
 /* ---------- Seats ---------- */
@@ -457,12 +582,29 @@ button.card {
 }
 
 /* ---------- Tug of war ---------- */
+/* Vertical by default (opponent on top); horizontal in portrait (opponent left, viewer right).
+   Ticks and the marker are placed by --p: their offset from the middle towards the viewer's end. */
 .tug {
   display: grid;
   grid-template-rows: auto 1fr auto;
   justify-items: center;
   gap: 6px;
   padding: 4px 0;
+}
+.tug__side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.tug__name {
+  display: none;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--seat);
+  white-space: nowrap;
 }
 .tug__end {
   width: 14px;
@@ -472,22 +614,27 @@ button.card {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--seat) 25%, transparent);
 }
 .tug__track {
+  --dir: 180deg;
   position: relative;
   width: 6px;
   border-radius: 3px;
   background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--top, var(--seat-1)) 70%, transparent),
+    var(--dir),
+    color-mix(in srgb, var(--from) 70%, transparent),
     rgb(255 255 255 / 0.08) 50%,
-    color-mix(in srgb, var(--bottom, var(--seat-0)) 70%, transparent)
+    color-mix(in srgb, var(--to) 70%, transparent)
   );
 }
-.tug__tick {
+.tug__tick,
+.tug__marker {
   position: absolute;
   left: 50%;
+  top: calc(50% + var(--p));
+  transform: translate(-50%, -50%);
+}
+.tug__tick {
   width: 12px;
   height: 1px;
-  transform: translate(-50%, -50%);
   background: rgb(255 255 255 / 0.22);
 }
 .tug__tick--middle {
@@ -496,14 +643,11 @@ button.card {
   background: rgb(255 255 255 / 0.45);
 }
 .tug__marker {
-  position: absolute;
-  left: 50%;
   display: grid;
   place-items: center;
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  transform: translate(-50%, -50%);
   border: 2px solid var(--seat, rgb(255 255 255 / 0.6));
   background: color-mix(in srgb, var(--seat, var(--felt-3)) 85%, black);
   color: var(--ink);
@@ -511,7 +655,9 @@ button.card {
   font-weight: 700;
   font-size: 0.8rem;
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.5);
-  transition: top 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    top 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+    left 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .tug__marker:not([data-seat]) {
   background: var(--felt-3);
@@ -520,8 +666,16 @@ button.card {
 /* ---------- Board ---------- */
 .board {
   display: grid;
-  grid-template-columns: repeat(9, minmax(0, 1fr));
+  grid-template-columns: repeat(9, calc((100% - 8 * 6px) / 9));
   gap: 6px;
+}
+/* The tutorial's houses sit in columns 3–7; the outro fills in the rest. */
+.board--tutorial > * {
+  grid-column: var(--col);
+  grid-row: 1;
+}
+.house--extra {
+  pointer-events: none;
 }
 .house {
   position: relative;
@@ -542,7 +696,13 @@ button.card {
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  justify-self: stretch;
+  padding: 4px 2px;
+  border-radius: 8px;
   min-height: calc(var(--board-h) * 1.9 + 22px);
+  transition:
+    background 0.35s,
+    box-shadow 0.35s;
 }
 .house__side--opp {
   flex-direction: column-reverse;
@@ -562,74 +722,99 @@ button.card {
 .house__cards > * + * {
   margin-top: calc(var(--board-h) * -0.55);
 }
-.slot {
-  width: var(--board-w);
-  height: var(--board-h);
-  border: 2px dashed var(--gold);
-  border-radius: calc(var(--board-w) * 0.1);
-  background: color-mix(in srgb, var(--gold) 10%, transparent);
-}
 .house__tier {
   font-family: var(--font-display);
   font-size: 0.68rem;
   letter-spacing: 0.04em;
   color: var(--gold-bright);
-  white-space: nowrap;
+  text-align: center;
 }
-.house__tier.is-empty {
-  color: rgb(255 255 255 / 0.28);
+.house__combo {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.house__combo-name {
+  font-size: 0.62rem;
+  line-height: 1.1;
+}
+.stars {
+  display: inline-flex;
+  gap: 1px;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  line-height: 1;
+  letter-spacing: 0;
+}
+.stars__on {
+  color: var(--gold-bright);
+}
+.stars__off {
+  color: rgb(255 255 255 / 0.3);
 }
 .house__token {
   position: relative;
+  z-index: 2;
+  /* Decorative: clicks go through to the house underneath. */
+  pointer-events: none;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    translate 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+    scale 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes sigil-won {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  35% {
+    transform: scale(1.45) rotate(-10deg);
+  }
+  60% {
+    transform: scale(1.15) rotate(7deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
 }
 .shield {
   width: var(--shield);
   height: auto;
   filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.5));
 }
-.house__number {
-  font-family: var(--font-display);
-  font-size: 0.7rem;
-  color: var(--muted);
-}
-.house__pledge {
-  font-family: var(--font-display);
-  font-size: 0.6rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 0 6px;
-  border-radius: 999px;
-  white-space: nowrap;
+/* A won house: the sigil grows and moves over the winner's cards; only the winner's side takes
+   their colour. */
+.house[data-claim='viewer'] .house__token,
+.house[data-claim='opponent'] .house__token {
+  z-index: 6;
+  scale: 1.3;
 }
 .house[data-claim='viewer'] .house__token {
-  transform: translateY(14px);
+  translate: 0 28px;
 }
 .house[data-claim='opponent'] .house__token {
-  transform: translateY(-14px);
+  translate: 0 -28px;
 }
-/* A won house takes the winner's colour. */
-.house[data-seat] {
-  background: color-mix(in srgb, var(--seat) 24%, rgb(0 0 0 / 0.2));
-  border-color: color-mix(in srgb, var(--seat) 75%, transparent);
+.house[data-claim='viewer'] .shield,
+.house[data-claim='opponent'] .shield {
+  animation: sigil-won 0.9s ease-out;
+  filter: drop-shadow(0 0 8px var(--seat)) drop-shadow(0 3px 4px rgb(0 0 0 / 0.5));
 }
-.house[data-seat] .house__pledge {
-  background: var(--seat);
-  color: var(--ink);
-}
-.house[data-seat] .house__number {
-  color: var(--seat);
+.house[data-claim='viewer'] .house__side--mine,
+.house[data-claim='opponent'] .house__side--opp {
+  background: color-mix(in srgb, var(--seat) 28%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--seat) 75%, transparent);
 }
 .house.is-playable {
-  border-color: color-mix(in srgb, var(--gold) 60%, transparent);
+  background: color-mix(in srgb, var(--gold) 9%, rgb(0 0 0 / 0.14));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 45%, transparent);
   cursor: pointer;
 }
 .house.is-playable:hover {
-  background: color-mix(in srgb, var(--gold) 14%, transparent);
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
 }
 .house__hit {
   position: absolute;
@@ -657,7 +842,8 @@ button.card {
 .tray > .seat {
   grid-area: seat;
 }
-.tray > .deck {
+.tray > .deck,
+.tray > .deck-spot {
   grid-area: deck;
 }
 .tray > .hand {
@@ -738,11 +924,16 @@ button.card {
 
 /* ---------- Log ---------- */
 .log {
-  border-left: 1px solid rgb(255 255 255 / 0.07);
-  padding: 14px var(--gutter);
-  background: rgb(0 0 0 / 0.16);
+  flex: 1;
+  min-height: 0;
+  padding: 12px var(--gutter);
   overflow-y: auto;
-  max-height: calc(100dvh - 58px);
+}
+.sheet .log {
+  padding: 0;
+}
+.sheet__body {
+  padding: 10px 18px 18px;
 }
 .log__title {
   margin: 0 0 8px;
@@ -848,6 +1039,9 @@ button.card {
 .rules__body {
   padding: 6px 22px 22px;
 }
+.rules__body h3.rules__centered {
+  text-align: center;
+}
 .rules__body h3 {
   margin: 18px 0 6px;
   font-family: var(--font-display);
@@ -945,49 +1139,379 @@ button.card {
   font-weight: 500;
 }
 
+/* ---------- Tutorial ---------- */
+@keyframes spotlight-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px var(--spot),
+      0 0 0 6px color-mix(in srgb, var(--spot) 0%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px var(--spot),
+      0 0 0 9px color-mix(in srgb, var(--spot) 35%, transparent);
+  }
+}
+@keyframes arrow-bob {
+  50% {
+    translate: 0 -7px;
+  }
+}
+@keyframes arrow-bob-x {
+  50% {
+    translate: -7px 0;
+  }
+}
+.with-arrow {
+  position: relative;
+}
+.with-arrow::after {
+  content: '▼';
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 4px);
+  transform: translateX(-50%);
+  z-index: 20;
+  color: var(--spot);
+  font-size: 22px;
+  line-height: 1;
+  text-shadow: 0 2px 6px rgb(0 0 0 / 0.6);
+  pointer-events: none;
+  animation: arrow-bob 0.9s ease-in-out infinite;
+}
+.tug-spot.with-arrow::after {
+  content: '◀';
+  left: calc(100% + 2px);
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  animation-name: arrow-bob-x;
+}
+.card.is-spotlight {
+  z-index: 3;
+}
+.is-spotlight {
+  border-radius: var(--radius);
+  animation: spotlight-pulse 1.4s ease-in-out infinite;
+}
+.card.is-dimmed {
+  opacity: 0.45;
+}
+.tug-spot {
+  display: grid;
+}
+.deck-spot {
+  display: flex;
+  align-self: end;
+}
+.tutorial .game__layout {
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+.tutorial__side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px var(--gutter);
+  border-left: 1px solid rgb(255 255 255 / 0.07);
+  background: rgb(0 0 0 / 0.16);
+}
+.tutorial__combos {
+  padding: 8px;
+}
+.tutorial__combos .tiers th,
+.tutorial__combos .tiers td {
+  padding: 4px 6px;
+}
+.tiers tr.is-highlighted {
+  background: color-mix(in srgb, var(--spot) 22%, transparent);
+  box-shadow: inset 3px 0 0 var(--spot);
+}
+.tutorial__coach-inline {
+  display: none;
+}
+.coach {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 2px solid var(--spot);
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--felt-3), var(--felt-2));
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+.coach__step {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.coach__text {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.inline-card {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 1px;
+  padding: 0 4px;
+  border: 1px solid var(--card-edge);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9em;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.inline-card.is-red {
+  color: var(--red);
+}
+.coach__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.coach__actions:empty {
+  display: none;
+}
+.coach__combos .tiers th,
+.coach__combos .tiers td {
+  padding: 3px 6px;
+}
+.start__hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 14px;
+  margin: -12px 0 22px;
+  color: var(--text);
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 1100px) {
-  .game__layout {
-    grid-template-columns: minmax(0, 1fr);
+  .game__layout,
+  .tutorial .game__layout {
+    grid-template-columns: minmax(0, 1fr) 240px;
   }
-  .log {
-    border-left: none;
-    border-top: 1px solid rgb(255 255 255 / 0.07);
-    max-height: 260px;
+  :root {
+    --board-w: clamp(28px, min(6vh, calc((100vw - 300px) / 9 - 12px)), 54px);
+  }
+}
+
+/* Short windows: a more compact menu. */
+@media (max-height: 820px) {
+  .start__crest {
+    display: none;
+  }
+  .start__title {
+    font-size: clamp(2.4rem, 10vw, 3.4rem);
+  }
+  .start__tagline {
+    margin: 0 0 14px;
+  }
+  .start__form {
+    gap: 12px;
+  }
+  .start__hint {
+    margin: 0 0 12px;
+  }
+}
+@media (max-height: 680px) {
+  .start__tagline {
+    display: none;
+  }
+  .choice__option {
+    min-height: 40px;
+    padding: 6px 10px;
   }
 }
 
 @media (max-width: 760px) {
   :root {
-    --hand-w: min(64px, calc((100vw - 2 * var(--gutter) - 6 * 5px) / 7));
-    --hand-h: calc(var(--hand-w) * 1.4);
-    --board-w: 30px;
-    --board-h: 42px;
-    --shield: 30px;
+    --hand-h: min(90px, calc((100vw - 2 * var(--gutter) - 52px - 6 * 5px) / 7 * 1.4), 12.5dvh);
+    --hand-w: calc(var(--hand-h) / 1.4);
     --deck-w: 30px;
     --deck-h: 42px;
   }
-  .arena {
-    grid-template-columns: 22px minmax(0, 1fr);
+  .game__layout,
+  .tutorial .game__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .game__side,
+  .tutorial__side {
+    display: none;
+  }
+  .only-phone {
+    display: grid;
+    place-items: center;
+  }
+  .label-full {
+    display: none;
+  }
+  .label-icon {
+    display: inline;
+    font-size: 1.1rem;
+  }
+  .topbar__text-button {
+    min-width: 40px;
+    padding: 0 10px;
+  }
+  .table {
+    flex: 1;
     gap: 6px;
+    padding: 8px var(--gutter) 10px;
+    overflow: hidden;
+  }
+  .arena {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .board {
+    flex: 1;
+    min-height: 0;
+    grid-auto-rows: minmax(0, 1fr);
+  }
+  /* Each house row sizes its cards and sigil to the row's height. */
+  .house {
+    container-type: size;
+    min-height: 0;
+    --board-h: min(46px, calc(100cqh - 2px));
+    --board-w: calc(var(--board-h) * 0.72);
+    --shield: min(30px, calc(100cqh - 4px));
+  }
+  .board--tutorial > * {
+    grid-column: auto;
+    grid-row: auto;
+    order: var(--col);
+  }
+  .tutorial__coach-inline {
+    display: block;
+  }
+  .coach {
+    padding: 10px 12px;
+    gap: 6px;
+  }
+  .coach__text {
+    font-size: 0.98rem;
+  }
+  .house__combo-name {
+    font-size: 0.55rem;
+  }
+  .house__combo .stars {
+    font-size: 0.56rem;
+    gap: 0;
+  }
+  .with-arrow.house::after {
+    content: '▶';
+    left: -15px;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+    font-size: 16px;
+    animation-name: arrow-bob-x;
+  }
+  .tug-spot.with-arrow::after {
+    content: '▶';
+    left: -15px;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+    font-size: 16px;
+    animation-name: arrow-bob-x;
+  }
+  .arena {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  /* On phones the combinations appear only inside the coach, when a step needs them. */
+  .tutorial__side {
+    display: none;
+  }
+  /* The bar lies horizontally above the board and is centred: both ends hold an equal-sized dot,
+     and the players' names sit on their own row above it (opponent left, viewer right). */
+  .tug {
+    grid-template-rows: auto auto;
+    /* Fixed end columns (the dots) keep the bar centred however long the names are. */
+    grid-template-columns: 14px minmax(0, 1fr) 14px;
+    align-items: center;
+    gap: 2px 8px;
+    padding: 2px 0;
+  }
+  .tug__side {
+    display: contents;
+  }
+  .tug__name {
+    display: block;
+    font-size: 0.72rem;
+  }
+  /* Names share the top row, each spanning over the bar from its own end. */
+  .tug__side--opponent .tug__name {
+    grid-row: 1;
+    grid-column: 1 / 3;
+    justify-self: start;
+  }
+  .tug__side--viewer .tug__name {
+    grid-row: 1;
+    grid-column: 2 / 4;
+    justify-self: end;
+  }
+  .tug__side--opponent .tug__end {
+    grid-row: 2;
+    grid-column: 1;
+  }
+  .tug__side--viewer .tug__end {
+    grid-row: 2;
+    grid-column: 3;
+  }
+  .tug__track {
+    --dir: 90deg;
+    grid-row: 2;
+    grid-column: 2;
+    width: auto;
+    height: 6px;
+    justify-self: stretch;
+  }
+  .tug__tick,
+  .tug__marker {
+    left: calc(50% + var(--p));
+    top: 50%;
+  }
+  .tug__tick {
+    width: 1px;
+    height: 12px;
+  }
+  .tug__tick--middle {
+    width: 2px;
+    height: 20px;
   }
   .tug__marker {
     width: 22px;
     height: 22px;
     font-size: 0.7rem;
   }
+  /* The names now live on the bar. */
+  .seat {
+    display: none;
+  }
   .tray {
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      'seat deck'
-      'hand hand';
+    grid-template-areas: 'hand deck';
     align-items: center;
+    column-gap: 8px;
   }
   .deck {
     padding-bottom: 0;
   }
   .deck__button {
-    flex-direction: row;
+    flex-direction: column;
+    gap: 2px;
   }
   body {
     font-size: 16px;
@@ -1013,15 +1537,16 @@ button.card {
   }
   .house {
     grid-template-rows: none;
-    grid-template-columns: minmax(0, 1fr) 58px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
     align-items: center;
-    padding: 3px 6px;
+    padding: 1px 6px;
   }
   .house__side {
     min-height: 0;
     flex-direction: row;
     gap: 6px;
     min-width: 0;
+    padding: 1px 4px;
   }
   .house__side--opp {
     flex-direction: row;
@@ -1054,35 +1579,39 @@ button.card {
     font-size: calc(var(--board-w) * 0.3);
   }
   .house__tier {
-    font-size: 0.6rem;
-    white-space: normal;
-    text-align: center;
-    line-height: 1.1;
     flex: none;
+  }
+  .stars {
+    font-size: 0.66rem;
   }
   .house__token {
     flex-direction: row;
     gap: 4px;
   }
-  .house__number {
-    font-size: 0.75rem;
-  }
-  .house__pledge {
-    display: none;
-  }
   .house[data-claim='viewer'] .house__token {
-    transform: translateX(6px);
+    translate: 14px 0;
+    scale: 1.2;
   }
   .house[data-claim='opponent'] .house__token {
-    transform: translateX(-6px);
+    translate: -14px 0;
+    scale: 1.2;
   }
   .hand {
     gap: 5px;
-    padding-top: 12px;
+    padding-top: 10px;
+    min-height: calc(var(--hand-h) + 12px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .with-arrow::after,
+  .house[data-claim] .shield {
+    animation: none;
+  }
+  .is-spotlight {
+    animation: none;
+    box-shadow: 0 0 0 2px var(--gold-bright);
+  }
   .tug__marker,
   .house__token,
   .house,

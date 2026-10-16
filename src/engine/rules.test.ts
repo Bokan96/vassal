@@ -98,8 +98,8 @@ describe('evaluating allegiances', () => {
   });
 
   it('automatically claims provable houses for the active player (C11)', () => {
-    const s = makeState({ hands: ['K♠', 'A♦'], houses: { 0: { p0: 'J♠ Q♠' } } });
-    const { state } = applyMove(s, play('K♠', 0));
+    const s = makeState({ hands: ['K♦', 'A♦'], houses: { 0: { p0: 'K♠ K♥' } } });
+    const { state } = applyMove(s, play('K♦', 0));
     expect(state.houses[0]!.claim).toMatchObject({ by: 0, reason: 'proof' });
   });
 
@@ -212,5 +212,23 @@ describe('no-wildcards ending (C8)', () => {
     const { state } = applyMove(endgame('2♣ 2♦', 1), play('4♣', 8));
     expect(state.houses[7]!.claim).toMatchObject({ by: 1, reason: 'final' });
     expect(state.result?.winner).toBe(1);
+  });
+});
+
+describe('smaller boards (tutorial)', () => {
+  it('resolves claims and detects three adjacent houses on a 5-house board', () => {
+    const s = makeState({
+      hands: ['K♦ 2♣', '9♦'],
+      pile: '4♠ 5♠',
+      houses: {
+        1: { claim: claimed(0) },
+        3: { claim: claimed(0) },
+        2: { p0: 'K♠ K♥' },
+      },
+    });
+    s.houses = s.houses.slice(0, 5);
+    const { state } = applyMove(s, play('K♦', 2));
+    expect(state.houses[2]!.claim).toMatchObject({ by: 0, reason: 'proof' });
+    expect(state.result).toEqual({ winner: 0, reason: 'adjacent', houses: [1, 2, 3] });
   });
 });

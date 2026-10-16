@@ -1,5 +1,5 @@
 import type { CardId } from './cards.ts';
-import { ALLIANCE_SIZE, HOUSE_COUNT, WIN_ADJACENT, WIN_HOUSES } from './config.ts';
+import { ALLIANCE_SIZE, WIN_ADJACENT, WIN_HOUSES } from './config.ts';
 import { proveHouse, tablePool } from './proof.ts';
 import {
   cloneState,
@@ -116,7 +116,7 @@ export function resolveAllegiances(s: GameState, emit?: Emit): void {
   const p = s.active;
 
   // 3a. Resolve houses where both alliances are full.
-  for (let i = 0; i < HOUSE_COUNT; i++) {
+  for (let i = 0; i < s.houses.length; i++) {
     const h = s.houses[i]!;
     if (h.claim || h.sides[0].length < ALLIANCE_SIZE || h.sides[1].length < ALLIANCE_SIZE) continue;
     claim(s, i, { by: houseWinner(h, s.start, s.config), reason: 'compare', turn: s.turn }, emit);
@@ -125,7 +125,7 @@ export function resolveAllegiances(s: GameState, emit?: Emit): void {
 
   // 3b. Claim every house the active player can prove (C4, C11).
   const pool = tablePool(s.houses, s.config);
-  for (let i = 0; i < HOUSE_COUNT; i++) {
+  for (let i = 0; i < s.houses.length; i++) {
     const proof = proveHouse(s.houses, i, p, s.config, pool);
     if (proof?.provable) {
       claim(s, i, { by: p, reason: 'proof', turn: s.turn, oppBest: proof.oppBest }, emit);
@@ -135,7 +135,7 @@ export function resolveAllegiances(s: GameState, emit?: Emit): void {
 
   // No-wildcards ending: every card played without a winner (C8).
   if (s.pile.length === 0 && s.hands[0].length === 0 && s.hands[1].length === 0) {
-    for (let i = 0; i < HOUSE_COUNT; i++) {
+    for (let i = 0; i < s.houses.length; i++) {
       const h = s.houses[i]!;
       if (h.claim) continue;
       claim(s, i, { by: houseWinner(h, s.start, s.config), reason: 'final', turn: s.turn }, emit);

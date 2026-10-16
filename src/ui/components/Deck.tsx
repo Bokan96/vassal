@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n.ts';
 import { CardBack } from './Card.tsx';
 
 interface DeckProps {
@@ -12,6 +13,7 @@ interface DeckProps {
 
 /** The draw pile. Clicking it shows the cards the viewer has not seen. */
 export function Deck({ count, outgoing, onOpen }: DeckProps) {
+  const { t } = useI18n();
   const layers = Math.min(3, Math.ceil(count / 14));
   return (
     <div className="deck" data-testid="deck">
@@ -19,7 +21,7 @@ export function Deck({ count, outgoing, onOpen }: DeckProps) {
         type="button"
         className="deck__button"
         onClick={onOpen}
-        aria-label={`Draw pile, ${count} cards. Show the cards you have not seen`}
+        aria-label={t.deckLabel(count)}
       >
         <span className="deck__stack">
           {count === 0 ? (

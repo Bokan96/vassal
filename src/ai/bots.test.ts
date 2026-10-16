@@ -79,7 +79,7 @@ describe('bots', () => {
     expect(viewMoves(getPlayerView(s, s.active === 0 ? 1 : 0))).toEqual([]);
   });
 
-  // Player 0 holds houses 6 and 7; K♠ completes an unbeatable J♠ Q♠ K♠ at house 8.
+  // Player 0 holds houses 6 and 7; K♠ completes an unbeatable K♠ K♥ K♦ at house 8.
   const winningSpot = () =>
     withFullDeck(
       makeState({
@@ -88,7 +88,7 @@ describe('bots', () => {
         houses: {
           6: { claim: { by: 0, reason: 'compare', turn: 1 } },
           7: { claim: { by: 0, reason: 'compare', turn: 1 } },
-          8: { p0: 'J♠ Q♠' },
+          8: { p0: 'K♥ K♦' },
         },
       }),
     );

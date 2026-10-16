@@ -15,7 +15,8 @@
     "format": "prettier --write .",
     "e2e": "playwright test",
     "sim": "tsx scripts/sim.ts",
-    "check": "npm run typecheck && npm run lint && npm run test"
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "meta": "tsx scripts/meta.ts"
   },
   "dependencies": {
     "motion": "^14.1.1",

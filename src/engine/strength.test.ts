@@ -23,6 +23,7 @@ const tierName = (cards: string, config: RulesConfig = cfg) => TIER_NAMES[tierOf
 describe('alliance tiers (rulebook table)', () => {
   it.each([
     ['2♠ 3♠ 4♠', 'Coup'],
+    ['7♠ 7♥ 7♦', 'Triumvirate'],
     ['2♠ 3♣ 4♠', 'Scheme'],
     ['2♠ 3♥ 4♣', 'Plan'],
     ['2♠ 4♠ 8♠', 'Intent'],
@@ -61,7 +62,7 @@ describe('alliance tiers (rulebook table)', () => {
 
 describe('exhaustive tier counts over all 22,100 three-card hands', () => {
   const count = (motive: boolean) => {
-    const counts = new Array(7).fill(0);
+    const counts = new Array(TIER_NAMES.length).fill(0);
     for (let a = 0; a < NATURAL_COUNT; a++)
       for (let b = a + 1; b < NATURAL_COUNT; b++)
         for (let c = b + 1; c < NATURAL_COUNT; c++)
@@ -70,21 +71,42 @@ describe('exhaustive tier counts over all 22,100 three-card hands', () => {
   };
 
   it('matches the rulebook probabilities (C1, C10)', () => {
-    const [, discord, motive, intent, plan, scheme, coup] = count(true);
-    expect({ coup, scheme, plan, intent, motive, discord }).toEqual({
+    const [, discord, motive, intent, plan, scheme, coup, triumvirate] = count(true);
+    expect({ coup, triumvirate, scheme, plan, intent, motive, discord }).toEqual({
       coup: 44,
+      triumvirate: 52,
       scheme: 132,
       plan: 528,
       intent: 1100,
       motive: 3924,
-      discord: 16372,
+      discord: 16320,
     });
   });
 
   it('folds Motive into Discord without the Motive tier', () => {
     const counts = count(false);
     expect(counts[Tier.Motive]).toBe(0);
-    expect(counts[Tier.Discord]).toBe(20296);
+    expect(counts[Tier.Discord]).toBe(20244);
+  });
+});
+
+describe('C14: Triumvirate', () => {
+  it('is the highest tier, then ranked by combined rank', () => {
+    expect(s('A♠ A♥ A♦')).toBeGreaterThan(s('J♠ Q♠ K♠'));
+    expect(s('2♠ 2♥ 2♦')).toBeGreaterThan(s('J♠ Q♣ K♠'));
+    expect(s('K♠ K♥ K♦')).toBe(makeStrength(Tier.Triumvirate, 39));
+    expect(s('3♣ 3♦ 3♥')).toBeGreaterThan(s('2♠ 2♥ 2♦'));
+  });
+
+  it('can be completed by a joker, which then beats lesser tiers', () => {
+    expect(resolveAlliance(parseCards('5♠ 5♣ 🃏'), cfg).strength).toBe(
+      makeStrength(Tier.Triumvirate, 15),
+    );
+    expect(s('5♠ 5♥ 🃏', noMotive)).toBe(makeStrength(Tier.Triumvirate, 15));
+  });
+
+  it('a joker still prefers a Coup when one is possible', () => {
+    expect(s('Q♠ K♠ 🃏')).toBe(makeStrength(Tier.Coup, 36));
   });
 });
 
@@ -152,12 +174,14 @@ describe('tier labels', () => {
   it('name the tier and its power, without the rank sum', () => {
     expect(formatTier(s('2♠ 3♥ 4♣'), cfg)).toBe('Plan (4)');
     expect(formatTier(s('J♠ Q♠ K♠'), cfg)).toBe('Coup (6)');
+    expect(formatTier(s('7♠ 7♥ 7♦'), cfg)).toBe('Triumvirate (7)');
     expect(formatTier(s('2♠ 4♥ 8♣'), cfg)).toBe('Discord (1)');
   });
 
   it('renumber the tiers above Motive when the Motive tier is not in play', () => {
     expect(formatTier(s('2♠ 3♥ 4♣', noMotive), noMotive)).toBe('Plan (3)');
     expect(formatTier(s('J♠ Q♠ K♠', noMotive), noMotive)).toBe('Coup (5)');
+    expect(formatTier(s('7♠ 7♥ 7♦', noMotive), noMotive)).toBe('Triumvirate (6)');
     expect(formatTier(s('2♠ 4♣ 8♠', noMotive), noMotive)).toBe('Discord (1)');
   });
 });

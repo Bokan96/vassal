@@ -1,121 +1,139 @@
 import {
+  cloneHouse,
   compareCards,
   formatCard,
-  formatTier,
   isJoker,
   resolveAlliance,
   sumOf,
   tierOf,
+  tierPower,
+  Tier,
   type GameEvent,
   type GameState,
   type House,
   type Player,
   type RulesConfig,
+  type Strength,
 } from '../engine/index.ts';
-import { houseLabel } from './houses.ts';
+import type { Dict, Role } from './i18n.ts';
 
-/** A card as text for sentences: "7♥", or "the Joker". */
-export const cardText = (c: number): string => (isJoker(c) ? 'the Joker' : formatCard(c));
-
+/**
+ * One line of the game log, kept as data so it can be shown in whichever language is active.
+ * Claims carry a snapshot of their house, because cards may still be played there later (C6).
+ */
 export interface LogEntry {
   id: number;
-  text: string;
-  kind: 'play' | 'draw' | 'claim' | 'win';
+  kind: 'play' | 'claim' | 'win';
   player: Player;
+  event: GameEvent;
+  house?: House;
+}
+
+/** Turn engine events into log entries ("drew" events are not logged). */
+export function logEntries(events: GameEvent[], state: GameState, firstId: number): LogEntry[] {
+  const out: LogEntry[] = [];
+  for (const e of events) {
+    const id = firstId + out.length;
+    if (e.t === 'played') out.push({ id, kind: 'play', player: e.p, event: e });
+    else if (e.t === 'claimed') {
+      out.push({
+        id,
+        kind: 'claim',
+        player: e.claim.by,
+        event: e,
+        house: cloneHouse(state.houses[e.house]!),
+      });
+    } else if (e.t === 'won') out.push({ id, kind: 'win', player: e.result.winner, event: e });
+  }
+  return out;
+}
+
+/**
+ * Star rating of an alliance: Mixed has no stars and every level above it adds one, so the top
+ * level fills every slot (6 slots, or 5 without the Same Colour level).
+ */
+export function starRating(s: Strength, config: RulesConfig): { filled: number; slots: number } {
+  const slots = tierPower(Tier.Triumvirate, config) - 1;
+  return { filled: Math.max(0, tierPower(tierOf(s), config) - 1), slots };
+}
+
+export const starText = ({ filled, slots }: { filled: number; slots: number }): string =>
+  '★'.repeat(filled) + '☆'.repeat(slots - filled);
+
+/** Tier name with its stars, e.g. "Straight ★★★☆☆☆". */
+export function tierLabel(s: Strength, config: RulesConfig, t: Dict): string {
+  return `${t.tierNames[tierOf(s)]} ${starText(starRating(s, config))}`;
 }
 
 /**
  * Alliance label for a full side, e.g. "Scheme (5): 2♣ 3♠ 4♣". Cards are listed in display order,
  * with a joker shown where the card it mirrors would sort.
  */
-export function allianceLabel(cards: readonly number[], config: RulesConfig): string {
+export function allianceLabel(cards: readonly number[], config: RulesConfig, t: Dict): string {
   const r = resolveAlliance(cards, config);
   const shown = cards
     .map((c) => ({ c, as: isJoker(c) && r.jokerAs !== null ? r.jokerAs : c }))
     .sort((a, b) => compareCards(a.as, b.as))
-    .map(({ c, as }) => (isJoker(c) ? `Joker as ${formatCard(as)}` : formatCard(c)));
-  return `${formatTier(r.strength, config)}: ${shown.join(' ')}`;
+    .map(({ c, as }) => (isJoker(c) ? t.jokerAs(formatCard(as)) : formatCard(c)));
+  return `${tierLabel(r.strength, config, t)}: ${shown.join(' ')}`;
 }
-
-/** A player's name as used mid-sentence: "you", "the opponent", "Player 2". */
-const mid = (name: string): string =>
-  name === 'You' ? 'you' : name === 'Opponent' ? 'the opponent' : name;
 
 /** Why a house was claimed, in words. Rank sums are mentioned only when they decide it. */
 export function claimExplanation(
   house: House,
   config: RulesConfig,
-  names: [string, string],
+  roles: [Role, Role],
+  t: Dict,
 ): string {
   const c = house.claim;
   if (!c) return '';
   const winner = house.sides[c.by];
   const loser = house.sides[c.by === 0 ? 1 : 0];
-  const loserName = mid(names[c.by === 0 ? 1 : 0]);
+  const loserRole = roles[c.by === 0 ? 1 : 0];
+  const a = allianceLabel(winner, config, t);
   switch (c.reason) {
     case 'compare': {
       const ws = resolveAlliance(winner, config).strength;
       const ls = resolveAlliance(loser, config).strength;
-      const versus = `${allianceLabel(winner, config)} against ${allianceLabel(loser, config)}`;
-      if (tierOf(ws) !== tierOf(ls))
-        return `${allianceLabel(winner, config)} beats ${allianceLabel(loser, config)}`;
-      if (ws !== ls) return `${versus}, higher rank sum ${sumOf(ws)} vs ${sumOf(ls)}`;
-      return `${versus}, equal rank sum ${sumOf(ws)}; completed first`;
+      const b = allianceLabel(loser, config, t);
+      if (tierOf(ws) !== tierOf(ls)) return t.beats(a, b);
+      if (ws !== ls) return t.higherSum(a, b, sumOf(ws), sumOf(ls));
+      return t.equalSum(a, b, sumOf(ws));
     }
     case 'proof': {
-      if (c.oppBest === undefined || c.oppBest < 0) {
-        return `${allianceLabel(winner, config)} is unbeatable: ${loserName} can no longer complete an alliance here`;
-      }
+      if (c.oppBest === undefined || c.oppBest < 0) return t.unbeatableNone(a, loserRole);
       const mine = resolveAlliance(winner, config).strength;
       const sameTier = tierOf(c.oppBest) === tierOf(mine);
-      const best = `${formatTier(c.oppBest, config)}${sameTier ? ` with rank sum ${sumOf(c.oppBest)}` : ''}`;
-      return `${allianceLabel(winner, config)}${sameTier ? ` (rank sum ${sumOf(mine)})` : ''} is unbeatable: the best ${loserName} could still form is ${best}`;
+      const best = sameTier
+        ? t.withSum(tierLabel(c.oppBest, config, t), sumOf(c.oppBest))
+        : tierLabel(c.oppBest, config, t);
+      return t.unbeatableBest(sameTier ? a + t.rankSum(sumOf(mine)) : a, loserRole, best);
     }
     case 'final':
-      return 'Resolved after the last card was played';
+      return t.finalResolved;
   }
 }
 
-export function describeEvent(
-  e: GameEvent,
-  state: GameState,
-  names: [string, string],
-  id: number,
-): LogEntry | null {
+/** The text of a log entry in the active language. */
+export function describeEntry(
+  entry: LogEntry,
+  config: RulesConfig,
+  roles: [Role, Role],
+  t: Dict,
+): string {
+  const e = entry.event;
   switch (e.t) {
     case 'played':
-      return {
-        id,
-        kind: 'play',
-        player: e.p,
-        text: `${names[e.p]} played ${cardText(e.card)} to ${houseLabel(e.house)}`,
-      };
-    case 'drew':
-      return null;
+      return t.played(roles[e.p], e.card, e.house);
     case 'claimed':
-      return {
-        id,
-        kind: 'claim',
-        player: e.claim.by,
-        text: `${names[e.claim.by]} ${names[e.claim.by] === 'You' ? 'win' : 'wins'} ${houseLabel(e.house)}: ${claimExplanation(
-          state.houses[e.house]!,
-          state.config,
-          names,
-        )}`,
-      };
-    case 'won': {
-      const how =
-        e.result.reason === 'adjacent'
-          ? `three adjacent houses (${e.result.houses[0]! + 1}–${e.result.houses.at(-1)! + 1})`
-          : e.result.reason === 'five'
-            ? `${e.result.houses.length} houses`
-            : `a majority of houses (${e.result.houses.length})`;
-      return {
-        id,
-        kind: 'win',
-        player: e.result.winner,
-        text: `${names[e.result.winner]} wins with ${how}`,
-      };
-    }
+      return t.claimed(
+        roles[e.claim.by],
+        e.house,
+        entry.house ? claimExplanation(entry.house, config, roles, t) : '',
+      );
+    case 'won':
+      return t.wonWith(roles[e.result.winner], e.result);
+    case 'drew':
+      return '';
   }
 }

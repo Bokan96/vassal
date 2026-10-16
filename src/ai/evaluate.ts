@@ -24,8 +24,8 @@ import {
   type RulesConfig,
 } from '../engine/index.ts';
 
-/** Strength buckets: every possible strength is below 7 * TIER_STEP. */
-const BUCKETS = 7 * TIER_STEP;
+/** Strength buckets: every possible strength is below (top tier + 1) * TIER_STEP. */
+const BUCKETS = (Tier.Triumvirate + 1) * TIER_STEP;
 /** Chance that a joker in hand ends up on a given side (it can only be used once). */
 const JOKER_Q = 0.85;
 const MIN_Q = 1e-4;
@@ -79,11 +79,12 @@ const miss = new Float64Array(BUCKETS);
 /** Prior for a side with no cards yet: a typical alliance under sensible play. */
 function emptyPrior(config: RulesConfig, out: Float64Array): void {
   const tiers: [Tier, number][] = [
-    [Tier.Discord, config.motive ? 0.3 : 0.58],
+    [Tier.Discord, config.motive ? 0.27 : 0.55],
     [Tier.Motive, config.motive ? 0.28 : 0],
     [Tier.Intent, 0.18],
     [Tier.Plan, 0.14],
     [Tier.Scheme, 0.06],
+    [Tier.Triumvirate, 0.03],
     [Tier.Coup, 0.04],
   ];
   for (const [tier, mass] of tiers) {

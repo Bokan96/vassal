@@ -47,7 +47,7 @@ function tableAvail(houses: readonly House[]): { avail: Avail; jokerOnTable: [bo
 
 /** Best tier two cards can still grow into, given which naturals are still off the table. */
 function pairPotential(a: CardId, b: CardId, avail: Avail, motive: boolean): Tier {
-  if (isJoker(a) || isJoker(b)) return Tier.Coup;
+  if (isJoker(a) || isJoker(b)) return Tier.Triumvirate;
   const ra = rankOf(a);
   const rb = rankOf(b);
   const sa = suitOf(a);
@@ -71,6 +71,13 @@ function pairPotential(a: CardId, b: CardId, avail: Avail, motive: boolean): Tie
             ? Tier.Scheme
             : Tier.Plan;
       if (t > tier) tier = t;
+    }
+  }
+  // A pair can become a Triumvirate while a third card of its rank is still off the table (C14).
+  // `avail` only tracks the table, so the pair's own cards must be skipped explicitly.
+  if (ra === rb && tier < Tier.Triumvirate) {
+    for (let s = 0; s < 4; s++) {
+      if (s !== sa && s !== sb && avail[s * 13 + ra - 1]) return Tier.Triumvirate;
     }
   }
   return tier;

@@ -3,40 +3,66 @@ import type { AiLevel } from '../../ai/bots.ts';
 import type { Player } from '../../engine/index.ts';
 import type { Mode, NewGameOptions } from '../hooks/useGame.ts';
 import { HOUSES } from '../houses.ts';
+import { LanguageSwitch } from '../components/LanguageSwitch.tsx';
 import { Shield } from '../components/Shield.tsx';
+import { SoundToggle } from '../components/SoundToggle.tsx';
+import { useI18n } from '../i18n.ts';
 
 interface StartScreenProps {
   canResume: boolean;
   onStart: (opts: NewGameOptions) => void;
   onResume: () => void;
   onRules: () => void;
+  onTutorial: () => void;
+  /** Until the tutorial has been seen, it is suggested to first-time visitors. */
+  tutorialSeen: boolean;
 }
 
-const LEVELS: { id: AiLevel; label: string; hint: string }[] = [
-  { id: 'easy', label: 'Squire', hint: 'Easy' },
-  { id: 'normal', label: 'Knight', hint: 'Normal' },
-  { id: 'hard', label: 'Chancellor', hint: 'Hard' },
-];
+/** Difficulty slider positions, easiest first. */
+const LEVELS = ['easy', 'normal', 'hard'] as const;
 
-export function StartScreen({ canResume, onStart, onResume, onRules }: StartScreenProps) {
+export function StartScreen({
+  canResume,
+  onStart,
+  onResume,
+  onRules,
+  onTutorial,
+  tutorialSeen,
+}: StartScreenProps) {
   const [mode, setMode] = useState<Mode>('ai');
-  const [aiLevel, setAiLevel] = useState<AiLevel>('normal');
+  const { t } = useI18n();
+  const [aiLevel, setAiLevel] = useState<(typeof LEVELS)[number]>('normal');
   const [start, setStart] = useState<Player | 'random'>('random');
-  // Optional rules from the rulebook; all off by default (standard game).
+  // Optional rules from the rulebook. The game starts without wildcards by default.
   const [noMotive, setNoMotive] = useState(false);
-  const [noWildcards, setNoWildcards] = useState(false);
+  const [noWildcards, setNoWildcards] = useState(true);
 
-  const first = mode === 'ai' ? ['You', 'The computer'] : ['Player 1', 'Player 2'];
+  const first =
+    mode === 'ai' ? [t.name('you'), t.computer] : [t.name('player1'), t.name('player2')];
+  const level = t.levels[aiLevel];
 
   return (
     <main className="start">
+      <div className="start__lang">
+        <SoundToggle />
+        <LanguageSwitch />
+      </div>
       <div className="start__crest" aria-hidden="true">
         {HOUSES.map((arms, i) => (
           <Shield key={i} arms={arms} />
         ))}
       </div>
       <h1 className="start__title">Vassal</h1>
-      <p className="start__tagline">Win the allegiance of the nine noble houses.</p>
+      <p className="start__tagline">{t.tagline}</p>
+
+      {!tutorialSeen && (
+        <p className="start__hint">
+          <button type="button" className="button button--primary" onClick={onTutorial}>
+            {t.tutorial}
+          </button>
+          <span>{t.tutorialHint}</span>
+        </p>
+      )}
 
       <form
         className="start__form"
@@ -44,14 +70,14 @@ export function StartScreen({ canResume, onStart, onResume, onRules }: StartScre
           e.preventDefault();
           onStart({
             mode,
-            aiLevel,
+            aiLevel: aiLevel satisfies AiLevel,
             start,
             config: { motive: !noMotive, wildcards: !noWildcards },
           });
         }}
       >
         <fieldset className="choice">
-          <legend>Opponent</legend>
+          <legend>{t.opponent}</legend>
           <label className={`choice__option${mode === 'ai' ? ' is-checked' : ''}`}>
             <input
               type="radio"
@@ -59,7 +85,7 @@ export function StartScreen({ canResume, onStart, onResume, onRules }: StartScre
               checked={mode === 'ai'}
               onChange={() => setMode('ai')}
             />
-            <span>The computer</span>
+            <span>{t.computer}</span>
           </label>
           <label className={`choice__option${mode === 'hotseat' ? ' is-checked' : ''}`}>
             <input
@@ -68,44 +94,55 @@ export function StartScreen({ canResume, onStart, onResume, onRules }: StartScre
               checked={mode === 'hotseat'}
               onChange={() => setMode('hotseat')}
             />
-            <span>A friend on this device</span>
+            <span>{t.friend}</span>
           </label>
         </fieldset>
 
         {mode === 'ai' && (
-          <fieldset className="choice">
-            <legend>Difficulty</legend>
-            {LEVELS.map((l) => (
-              <label
-                key={l.id}
-                className={`choice__option${aiLevel === l.id ? ' is-checked' : ''}`}
-              >
-                <input
-                  type="radio"
-                  name="level"
-                  checked={aiLevel === l.id}
-                  onChange={() => setAiLevel(l.id)}
-                />
-                <span>
-                  {l.label} <small>{l.hint}</small>
-                </span>
-              </label>
-            ))}
+          <fieldset className="choice level">
+            <legend>{t.difficulty}</legend>
+            <p className="level__current" aria-hidden="true">
+              {level.label} <small>{level.hint}</small>
+            </p>
+            <input
+              type="range"
+              className="level__range"
+              min={0}
+              max={LEVELS.length - 1}
+              step={1}
+              value={LEVELS.indexOf(aiLevel)}
+              onChange={(e) => setAiLevel(LEVELS[Number(e.target.value)]!)}
+              aria-label={t.difficulty}
+              aria-valuetext={`${level.label}, ${level.hint}`}
+            />
+            <div className="level__ticks">
+              {LEVELS.map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  tabIndex={-1}
+                  className={`level__tick${l === aiLevel ? ' is-active' : ''}`}
+                  onClick={() => setAiLevel(l)}
+                >
+                  {t.levels[l].label}
+                </button>
+              ))}
+            </div>
           </fieldset>
         )}
 
         <fieldset className="choice">
-          <legend>First move</legend>
+          <legend>{t.firstMove}</legend>
           {(['random', 0, 1] as const).map((s) => (
             <label key={s} className={`choice__option${start === s ? ' is-checked' : ''}`}>
               <input type="radio" name="start" checked={start === s} onChange={() => setStart(s)} />
-              <span>{s === 'random' ? 'Random' : first[s]}</span>
+              <span>{s === 'random' ? t.random : first[s]}</span>
             </label>
           ))}
         </fieldset>
 
         <details className="variants">
-          <summary>Variants</summary>
+          <summary>{t.variants}</summary>
           <label className="toggle">
             <input
               type="checkbox"
@@ -113,7 +150,7 @@ export function StartScreen({ canResume, onStart, onResume, onRules }: StartScre
               onChange={(e) => setNoMotive(e.target.checked)}
             />
             <span>
-              No Motive tier <small>Five tiers instead of six, as in Battle Line</small>
+              {t.noMotive} <small>{t.noMotiveHint}</small>
             </span>
           </label>
           <label className="toggle">
@@ -123,23 +160,28 @@ export function StartScreen({ canResume, onStart, onResume, onRules }: StartScre
               onChange={(e) => setNoWildcards(e.target.checked)}
             />
             <span>
-              No wildcards <small>Play without jokers, with 7-card hands</small>
+              {t.noWildcards} <small>{t.noWildcardsHint}</small>
             </span>
           </label>
         </details>
 
         <div className="start__actions">
           <button type="submit" className="button button--primary">
-            Begin
+            {t.begin}
           </button>
           {canResume && (
             <button type="button" className="button" onClick={onResume}>
-              Resume game
+              {t.resume}
             </button>
           )}
           <button type="button" className="button button--quiet" onClick={onRules}>
-            How to play
+            {t.howToPlay}
           </button>
+          {tutorialSeen && (
+            <button type="button" className="button button--quiet" onClick={onTutorial}>
+              {t.tutorial}
+            </button>
+          )}
         </div>
       </form>
     </main>

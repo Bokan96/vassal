@@ -11,6 +11,8 @@ export const Tier = {
   Plan: 4,
   Scheme: 5,
   Coup: 6,
+  /** Three of a kind: a house rule and the highest tier (C14). */
+  Triumvirate: 7,
 } as const;
 export type Tier = (typeof Tier)[keyof typeof Tier];
 
@@ -22,6 +24,7 @@ export const TIER_NAMES = [
   'Plan',
   'Scheme',
   'Coup',
+  'Triumvirate',
 ] as const;
 
 /**
@@ -40,7 +43,7 @@ export function formatStrength(s: Strength): string {
 }
 
 /**
- * A tier's power among the tiers in play: Discord 1 … Coup 6, or Coup 5 without the Motive tier.
+ * A tier's power among the tiers in play: Discord 1 … Triumvirate 7, or 6 without the Motive tier.
  */
 export function tierPower(tier: Tier, config: RulesConfig): number {
   return !config.motive && tier > Tier.Motive ? tier - 1 : tier;
@@ -74,6 +77,8 @@ export function naturalStrength(a: CardId, b: CardId, c: CardId, motive: boolean
   const sameColor = sa >> 1 === sb >> 1 && sb >> 1 === sc >> 1;
   let tier: Tier;
   if (sequence) tier = sameSuit ? Tier.Coup : sameColor ? Tier.Scheme : Tier.Plan;
+  else if (ra === rb && rb === rc)
+    tier = Tier.Triumvirate; // C14
   else if (sameSuit) tier = Tier.Intent;
   else if (sameColor && motive) tier = Tier.Motive;
   else tier = Tier.Discord;

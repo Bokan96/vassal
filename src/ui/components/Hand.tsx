@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { sortCards, type CardId } from '../../engine/index.ts';
+import { useI18n } from '../i18n.ts';
 import { Card } from './Card.tsx';
 
 interface HandProps {
@@ -7,13 +8,25 @@ interface HandProps {
   selected: CardId | null;
   enabled: boolean;
   onSelect: (card: CardId | null) => void;
+  /** Tutorial: only this card may be selected. */
+  allowed?: CardId | null;
+  /** Tutorial: the card to point at. */
+  spotlight?: CardId | null;
 }
 
 /**
  * The viewer's hand, sorted by rank, colour and suit: a row of selectable cards with arrow-key
  * navigation (roving tabindex).
  */
-export function Hand({ cards: unsorted, selected, enabled, onSelect }: HandProps) {
+export function Hand({
+  cards: unsorted,
+  selected,
+  enabled,
+  onSelect,
+  allowed = null,
+  spotlight = null,
+}: HandProps) {
+  const { t } = useI18n();
   const ref = useRef<HTMLDivElement>(null);
   const cards = sortCards(unsorted);
   const focusIndex = Math.max(0, selected === null ? 0 : cards.indexOf(selected));
@@ -33,7 +46,7 @@ export function Hand({ cards: unsorted, selected, enabled, onSelect }: HandProps
       className={`hand${enabled ? '' : ' is-disabled'}`}
       ref={ref}
       role="group"
-      aria-label="Your hand"
+      aria-label={t.yourHand}
     >
       {cards.map((c, i) => (
         <Card
@@ -43,7 +56,11 @@ export function Hand({ cards: unsorted, selected, enabled, onSelect }: HandProps
           selected={c === selected}
           tabIndex={i === focusIndex ? 0 : -1}
           onKeyDown={(e) => onKeyDown(e, i)}
-          onSelect={() => enabled && onSelect(c === selected ? null : c)}
+          spotlight={c === spotlight}
+          dimmed={allowed !== null && c !== allowed}
+          onSelect={() =>
+            enabled && (allowed === null || allowed === c) && onSelect(c === selected ? null : c)
+          }
         />
       ))}
     </div>

@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
+import { useI18n } from '../i18n.ts';
 import {
-  cardName,
   colorOf,
   formatCard,
   isJoker,
@@ -23,12 +23,17 @@ interface CardProps {
   onSelect?: () => void;
   tabIndex?: number;
   onKeyDown?: (e: React.KeyboardEvent) => void;
+  /** Tutorial: draw attention to this card. */
+  spotlight?: boolean;
+  /** Tutorial: shown but not playable right now. */
+  dimmed?: boolean;
 }
 
 /** Swift re-sorting and flights between deck, hand and board. */
 const LAYOUT = { type: 'spring', stiffness: 520, damping: 40, mass: 0.8 } as const;
 
 function Face({ card, size, jokerAs }: Pick<CardProps, 'card' | 'size' | 'jokerAs'>) {
+  const joker = useI18n().t.joker;
   if (isJoker(card)) {
     return (
       <>
@@ -41,7 +46,7 @@ function Face({ card, size, jokerAs }: Pick<CardProps, 'card' | 'size' | 'jokerA
           <circle cx="20" cy="2.6" r="2.4" />
           <circle cx="34" cy="7" r="2.4" />
         </svg>
-        {size === 'hand' && <span className="card__joker-label">Joker</span>}
+        {size === 'hand' && <span className="card__joker-label">{joker}</span>}
         {jokerAs != null && <span className="card__as">={formatCard(jokerAs)}</span>}
       </>
     );
@@ -76,11 +81,13 @@ export function Card({
   onSelect,
   tabIndex,
   onKeyDown,
+  spotlight,
+  dimmed,
 }: CardProps) {
   const tone = isJoker(card) ? 'joker' : colorOf(card) === RED ? 'red' : 'black';
-  const className = `card card--${size} card--${tone}${selected ? ' is-selected' : ''}${fresh ? ' is-fresh' : ''}`;
-  const label =
-    cardName(card) + (jokerAs != null ? `, standing in for the ${cardName(jokerAs)}` : '');
+  const className = `card card--${size} card--${tone}${selected ? ' is-selected' : ''}${fresh ? ' is-fresh' : ''}${spotlight ? ' is-spotlight with-arrow' : ''}${dimmed ? ' is-dimmed' : ''}`;
+  const { t } = useI18n();
+  const label = t.cardName(card) + (jokerAs != null ? t.standingIn(jokerAs) : '');
   const layoutId = `card-${card}`;
   if (onSelect) {
     return (
@@ -93,7 +100,7 @@ export function Card({
         onClick={onSelect}
         tabIndex={tabIndex}
         onKeyDown={onKeyDown}
-        animate={{ y: selected ? -14 : 0 }}
+        animate={{ y: selected ? -14 : 0, scale: spotlight ? 1.14 : 1 }}
         transition={{ type: 'spring', stiffness: 500, damping: 34, layout: LAYOUT }}
       >
         <Face card={card} size={size} jokerAs={jokerAs} />

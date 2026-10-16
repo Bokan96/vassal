@@ -4,7 +4,7 @@ Browser version of **Vassal**, a two-player area-control card game played with a
 (Battle Line / Schotten Totten style). v1 is hot-seat + vs AI, fully client-side. The engine is
 authoritative and serializable so online play can be added later without changing it.
 
-The rules, including every interpretation we adopted (Clarifications C1–C13), are the single source of truth:
+The rules, including every interpretation we adopted (Clarifications C1–C14), are the single source of truth:
 
 @docs/rules.md
 

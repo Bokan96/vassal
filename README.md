@@ -4,15 +4,23 @@ A browser version of **Vassal**, a two-player area-control card game played with
 in the spirit of Reiner Knizia's Battle Line / Schotten Totten. Win the allegiance of any **5** of the nine
 noble houses, or **3 adjacent** ones, by forming stronger three-card alliances than your opponent.
 
+**Play online:** https://bojanbozovic.com/vassal/
+
 - Play against the computer (three difficulty levels) or against a friend on the same device (hot-seat).
-- Optional variants from the rulebook: _No Motive tier_ and _No wildcards_.
+- An interactive tutorial on a 5-house board walks new players through a scripted game.
+- Serbian (default) and English, switched with the flags on the main menu (`?lang=en` also works).
+- Optional variants from the rulebook: _No Motive tier_ and _No wildcards_ (the default game is played
+  without wildcards).
+- House rule: three of a kind (**Three of a Kind** in the game) is the highest alliance (see C14).
+  Alliances are shown with plain names (Straight, Flush, …) and a 0–6 star rating.
+- Simple synthesized sound effects, with a mute button.
 - Works on desktop and phones, with keyboard play (arrows / Enter / 1–9 / Esc).
 - Hands and alliances are kept sorted (rank, colour, suit); drawn cards fly in from the deck, and
   clicking the deck shows every card you have not seen yet.
 - Runs entirely in the browser; games are saved locally and can be resumed.
 
 Rules: [docs/rules.md](docs/rules.md) (transcribed from [the original PDF](docs/Vassal_1.0.pdf), with the
-interpretations we adopted listed as Clarifications C1–C13).
+interpretations we adopted listed as Clarifications C1–C14).
 
 ## Getting started
 
@@ -30,6 +38,7 @@ npm run dev          # http://localhost:5173  (add ?seed=123 for a fixed deal)
 | `npm test`                                         | Vitest: rules engine and AI (golden, exhaustive and property-based tests) |
 | `npm run e2e`                                      | Playwright end-to-end tests (desktop and mobile, uses installed Chrome)   |
 | `npm run sim -- --games 500 --p0 easy --p1 normal` | Headless bot-vs-bot simulator                                             |
+| `npm run meta -- --games 400 --variant default`    | Strategy tournament (Three of a Kind hunter, straights, rushing, …)       |
 | `npm run check`                                    | Typecheck + lint + tests (the definition of done)                         |
 
 ## Architecture

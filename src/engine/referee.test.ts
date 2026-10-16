@@ -72,11 +72,13 @@ function refStrength(cards: readonly CardId[], motive: boolean): number {
       : sameColor
         ? Tier.Scheme
         : Tier.Plan
-    : sameSuit
-      ? Tier.Intent
-      : sameColor && motive
-        ? Tier.Motive
-        : Tier.Discord;
+    : ranks[0] === ranks[2]
+      ? Tier.Triumvirate // C14: three of the same rank
+      : sameSuit
+        ? Tier.Intent
+        : sameColor && motive
+          ? Tier.Motive
+          : Tier.Discord;
   return makeStrength(
     tier,
     ranks.reduce((a, b) => a + b, 0),
@@ -187,9 +189,9 @@ describe('referee: alliance strength (C1, C2, variants)', () => {
     expect(s('A♠ 3♠ 🃏')).toBe(makeStrength(Tier.Coup, 6));
   });
 
-  it('C2: 5♠ 5♣ 🃏 is Motive 23 (joker = a black king, no sequence possible)', () => {
-    expect(s('5♠ 5♣ 🃏')).toBe(makeStrength(Tier.Motive, 23));
-    expect(s('5♠ 5♥ 🃏')).toBe(makeStrength(Tier.Discord, 23));
+  it('C2 + C14: 5♠ 5♣ 🃏 is a Triumvirate 15 (joker = another five)', () => {
+    expect(s('5♠ 5♣ 🃏')).toBe(makeStrength(Tier.Triumvirate, 15));
+    expect(s('5♠ 5♥ 🃏')).toBe(makeStrength(Tier.Triumvirate, 15));
   });
 
   it('No-Motive variant: Scheme survives; only Motive folds into Discord', () => {
@@ -354,7 +356,7 @@ describe('referee: evaluation order (C5, C6, C11)', () => {
   it('C5: the opponent never wins by proof on your turn, even when it would complete a line', () => {
     const s0 = makeState({
       hands: ['2♦', 'A♦'],
-      houses: { 0: { claim: claimed(1) }, 1: { claim: claimed(1) }, 2: { p1: 'J♠ Q♠ K♠' } },
+      houses: { 0: { claim: claimed(1) }, 1: { claim: claimed(1) }, 2: { p1: 'K♠ K♥ K♦' } },
     });
     const { state } = applyMove(s0, play('2♦', 6));
     expect(state.result).toBeNull();
