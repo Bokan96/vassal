@@ -15,6 +15,7 @@ The rules, including every interpretation we adopted (Clarifications C1–C14), 
 - `npm run typecheck` / `npm run lint` / `npm run format`
 - `npm run e2e`: Playwright (desktop + mobile, uses installed Chrome)
 - `npm run sim -- --games 500 --p0 easy --p1 normal`: headless AI-vs-AI simulator
+- `http://localhost:5173/prevodi` (dev server only): translation editor; saves edits to `text-edits.json` (gitignored). "primeni prevode" = apply that file to the source, then delete it. `npm run texts` dumps all texts as JSON.
 - `npm run check`: typecheck + lint + test. **This is the definition of done for any change.**
 
 ## Layout

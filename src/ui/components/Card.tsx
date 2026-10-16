@@ -1,4 +1,5 @@
-import { motion } from 'motion/react';
+import { animate, motion, useMotionValue, useReducedMotion } from 'motion/react';
+import { useEffect, useRef, useState } from 'react';
 import { useI18n } from '../i18n.ts';
 import {
   colorOf,
@@ -27,10 +28,49 @@ interface CardProps {
   spotlight?: boolean;
   /** Tutorial: shown but not playable right now. */
   dimmed?: boolean;
+  /** Just drawn: flies in from the deck slowly, enlarged for a moment so the player sees it. */
+  drawn?: boolean;
 }
 
 /** Swift re-sorting and flights between deck, hand and board. */
 const LAYOUT = { type: 'spring', stiffness: 520, damping: 40, mass: 0.8 } as const;
+/** The flight of a freshly drawn card from the deck into its place in the hand. */
+const DRAW_FLIGHT = { type: 'tween', duration: 0.7, ease: [0.3, 0.7, 0.2, 1] } as const;
+/** How much a drawn card grows, and the shape of that moment: grow on the way, hold, settle. */
+const DRAW_POP = { scale: 1.35, duration: 1.5, times: [0, 0.35, 0.75, 1] } as const;
+
+/**
+ * The drawn-card moment. It is decided once, when the card mounts in the hand, and then runs its
+ * course even if `drawn` is cleared meanwhile (the opponent answering mid-flight starts a new
+ * batch of arrivals). The scale lives on scaleX/scaleY so it composes with the `scale` the card
+ * already animates (tutorial spotlight).
+ */
+function useDrawPop(drawn: boolean | undefined) {
+  const pop = useMotionValue(1);
+  const [showing, setShowing] = useState(!!drawn);
+  useEffect(() => {
+    if (!showing) return;
+    const t = setTimeout(() => setShowing(false), DRAW_POP.duration * 1000);
+    return () => clearTimeout(t);
+  }, [showing]);
+  const reduce = useReducedMotion();
+  const atMount = useRef({ drawn, reduce });
+  useEffect(() => {
+    const { drawn, reduce } = atMount.current;
+    if (!drawn || reduce) return;
+    const s = DRAW_POP.scale;
+    const controls = animate(pop, [1, s, s, 1], {
+      duration: DRAW_POP.duration,
+      times: [...DRAW_POP.times],
+      ease: 'easeInOut',
+    });
+    return () => {
+      controls.stop();
+      pop.set(1);
+    };
+  }, [pop]);
+  return { pop, showing };
+}
 
 function Face({ card, size, jokerAs }: Pick<CardProps, 'card' | 'size' | 'jokerAs'>) {
   const joker = useI18n().t.joker;
@@ -83,9 +123,11 @@ export function Card({
   onKeyDown,
   spotlight,
   dimmed,
+  drawn,
 }: CardProps) {
+  const { pop, showing: showingDraw } = useDrawPop(drawn);
   const tone = isJoker(card) ? 'joker' : colorOf(card) === RED ? 'red' : 'black';
-  const className = `card card--${size} card--${tone}${selected ? ' is-selected' : ''}${fresh ? ' is-fresh' : ''}${spotlight ? ' is-spotlight with-arrow' : ''}${dimmed ? ' is-dimmed' : ''}`;
+  const className = `card card--${size} card--${tone}${selected ? ' is-selected' : ''}${fresh ? ' is-fresh' : ''}${spotlight ? ' is-spotlight with-arrow' : ''}${dimmed ? ' is-dimmed' : ''}${showingDraw ? ' is-drawn' : ''}`;
   const { t } = useI18n();
   const label = t.cardName(card) + (jokerAs != null ? t.standingIn(jokerAs) : '');
   const layoutId = `card-${card}`;
@@ -100,8 +142,9 @@ export function Card({
         onClick={onSelect}
         tabIndex={tabIndex}
         onKeyDown={onKeyDown}
+        style={{ scaleX: pop, scaleY: pop }}
         animate={{ y: selected ? -14 : 0, scale: spotlight ? 1.14 : 1 }}
-        transition={{ type: 'spring', stiffness: 500, damping: 34, layout: LAYOUT }}
+        transition={{ type: 'spring', stiffness: 500, damping: 34, layout: showingDraw ? DRAW_FLIGHT : LAYOUT }}
       >
         <Face card={card} size={size} jokerAs={jokerAs} />
       </motion.button>

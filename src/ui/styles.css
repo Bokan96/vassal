@@ -486,6 +486,24 @@ button.card {
     0 0 0 2px var(--gold-bright),
     0 10px 22px rgb(0 0 0 / 0.5);
 }
+/* Just drawn: stays above its neighbours while it is shown enlarged (Card, DRAW_POP). */
+.card.is-drawn {
+  z-index: 4;
+  animation: card-drawn 1.5s ease-in-out;
+}
+@keyframes card-drawn {
+  0%,
+  100% {
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.35);
+  }
+  35%,
+  75% {
+    box-shadow:
+      0 0 0 2px var(--gold-bright),
+      0 0 22px rgb(232 196 104 / 0.55),
+      0 14px 28px rgb(0 0 0 / 0.5);
+  }
+}
 .card.is-fresh {
   box-shadow:
     0 0 0 2px var(--gold),
@@ -1604,6 +1622,7 @@ button.card {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .card.is-drawn,
   .with-arrow::after,
   .house[data-claim] .shield {
     animation: none;

@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="sr-Latn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vassal prevodi</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: sticky toolbar over a single list of rows; each row = label strip + SR | EN side by side (stacked on phones). */
+:root {
+  --bg: #eef2ee;
+  --panel: #ffffff;
+  --line: #d3dbd4;
+  --fg: #18231e;
+  --muted: #5c6b63;
+  --accent: #2f6b46;
+  --accent-fg: #ffffff;
+  --gold: #9a7420;
+  --gold-soft: #f6edd6;
+  --warn: #a2402f;
+  --warn-soft: #f8e4df;
+  --field: #f7f9f7;
+  --display: "Cinzel", "Trajan Pro", Georgia, serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111a16; --panel: #18241f; --line: #2c3b34; --fg: #e3ebe5; --muted: #93a39a;
+    --accent: #6fbf8b; --accent-fg: #0d1a13; --gold: #d8b45a; --gold-soft: #33301f;
+    --warn: #ef8f7c; --warn-soft: #3a231e; --field: #121c18; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111a16; --panel: #18241f; --line: #2c3b34; --fg: #e3ebe5; --muted: #93a39a;
+  --accent: #6fbf8b; --accent-fg: #0d1a13; --gold: #d8b45a; --gold-soft: #33301f;
+  --warn: #ef8f7c; --warn-soft: #3a231e; --field: #121c18; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+header.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--panel); border-bottom: 1px solid var(--line); }
+header.bar .wrap { padding-block: 14px 12px; display: grid; gap: 10px; }
+.title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
+h1 { font: 600 1.35rem/1.2 var(--display); letter-spacing: 0.04em; margin: 0; }
+.stats { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.stats b { color: var(--gold); font-weight: 600; }
+.save-state { margin-left: auto; font-size: 0.82rem; color: var(--muted); }
+.save-state.err { color: var(--warn); }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tools input[type="search"] { flex: 1 1 220px; min-width: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--field); color: var(--fg); font: inherit; }
+.toggle { display: inline-flex; gap: 6px; align-items: center; font-size: 0.9rem; color: var(--muted); cursor: pointer; }
+button { font: 500 0.88rem var(--body); padding: 7px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--field); color: var(--fg); cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+button:focus-visible, textarea:focus-visible, input:focus-visible, .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+.chip { flex: none; font-size: 0.82rem; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+.chip .n { font-variant-numeric: tabular-nums; opacity: 0.7; margin-left: 4px; }
+
+.intro { padding-block: 18px 6px; color: var(--muted); font-size: 0.92rem; display: grid; gap: 6px; }
+.intro p { margin: 0; max-width: 72ch; }
+.intro code, .hint code { font-family: var(--mono); font-size: 0.85em; background: var(--gold-soft); color: var(--fg); padding: 0 4px; border-radius: 3px; }
+.notice { padding: 10px 12px; border-radius: 6px; background: var(--warn-soft); color: var(--fg); }
+
+main.wrap { padding-block: 8px 60px; display: grid; gap: 22px; }
+section.group h2 { font: 600 0.78rem var(--body); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin: 0 0 8px; }
+.list { display: grid; gap: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.row { padding: 12px 14px 14px; display: grid; gap: 8px; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row.changed { background: color-mix(in srgb, var(--gold-soft) 55%, var(--panel)); }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 0.82rem; color: var(--muted); }
+.meta .key { font: 500 0.85rem var(--mono); color: var(--fg); word-break: break-all; }
+.pill { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.03em; padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; }
+.pill.tpl { color: var(--accent); }
+.pill.code { color: var(--warn); }
+.pill.chg { color: var(--gold); background: var(--gold-soft); border-color: transparent; }
+.pill.miss { color: var(--warn); background: var(--warn-soft); border-color: transparent; }
+.loc { margin-left: auto; font-family: var(--mono); font-size: 0.75rem; }
+.hint { font-size: 0.82rem; color: var(--muted); margin: 0; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 720px) { .cols { grid-template-columns: 1fr; } .loc { margin-left: 0; } }
+.field { display: grid; gap: 3px; min-width: 0; }
+.field label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: flex; gap: 8px; }
+.field label button { padding: 0 6px; font-size: 0.72rem; text-transform: none; letter-spacing: 0; border: 0; background: none; color: var(--accent); }
+textarea { width: 100%; min-height: 2.6em; resize: vertical; field-sizing: content; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--field); color: var(--fg); font: 0.95rem/1.45 var(--body); }
+textarea.code { font: 0.85rem/1.45 var(--mono); }
+textarea.dirty { border-color: var(--gold); }
+.note { width: 100%; padding: 6px 9px; border: 1px dashed var(--line); border-radius: 6px; background: transparent; color: var(--fg); font: 0.88rem var(--body); }
+.empty { padding: 30px; text-align: center; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .row { transition: background-color 0.2s; } }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <div class="title-row">
+      <h1>Vassal prevodi</h1>
+      <span class="stats" id="stats">Učitavam tekstove…</span>
+      <span class="save-state" id="save-state"></span>
+    </div>
+    <div class="tools">
+      <input type="search" id="q" placeholder="Traži tekst ili ključ…" aria-label="Traži">
+      <label class="toggle"><input type="checkbox" id="only-changed"> Samo izmenjeno</label>
+      <label class="toggle"><input type="checkbox" id="only-missing"> Samo bez prevoda</label>
+      <button type="button" id="copy">Kopiraj izmene</button>
+    </div>
+    <div class="chips" id="chips" role="toolbar" aria-label="Delovi igre"></div>
+  </div>
+</header>
+
+<div class="wrap intro">
+  <p>Ovde su svi tekstovi iz igre, srpski levo i engleski desno, onakvi kakvi su trenutno u kodu. Promeni tekst direktno u polju ili ostavi napomenu ispod. Sve se čuva samo od sebe u fajl <code>text-edits.json</code> u projektu.</p>
+  <p>Kad završiš, napiši Claude-u u VS Code-u <b>„primeni prevode“</b>. Claude pročita taj fajl, ubaci izmene u kod i obriše ga.</p>
+  <p>Delove kao <code>${card}</code> ili <code>${srName(r)}</code> ne diraj: tu igra ubacuje kartu, ime ili broj. Ako ti nešto nije jasno, opiši u napomeni šta želiš.</p>
+  <p class="notice" id="offline" hidden>Server za prevode ne odgovara. Pokreni <code>npm run dev</code> u projektu i otvori <code>http://localhost:5173/prevodi</code>.</p>
+</div>
+
+<main class="wrap" id="list"><div class="empty">Učitavam tekstove…</div></main>
+
+<script>
+const GROUPS = {
+  'Start screen': 'Početni ekran',
+  'General': 'Opšte',
+  'Shell': 'Meniji i dugmad',
+  'Players': 'Igrači',
+  'Status line and hand-off': 'Status i predaja uređaja',
+  'Tug of war': 'Traka vođstva',
+  'Board': 'Tabla',
+  'Unseen cards dialog': 'Neviđene karte',
+  'Log': 'Hronika (tok igre)',
+  'Cards and tiers': 'Karte i kombinacije',
+  'Tutorial': 'Tutorijal',
+  'Rules': 'Pravila',
+};
+const LABELS = { 'Player names': 'Imena igrača', 'Player names, genitive (Serbian only)': 'Imena igrača u genitivu (samo srpski)', 'Card ranks': 'Vrednosti karata', 'Intro': 'Uvod', 'Section': 'Odeljak', 'heading': 'naslov', 'item': 'stavka', 'Step': 'Korak' };
+const HINTS = {
+  '**bold** marks emphasis in the tutorial bubble.': 'Tekst između **zvezdica** se prikazuje podebljano.',
+  'Inline tags such as <strong>…</strong> are kept.': 'Oznake <strong>…</strong> podebljavaju tekst; zadrži ih oko reči koje treba istaći.',
+};
+
+const $ = (s) => document.querySelector(s);
+const el = (tag, props = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') n.className = v;
+    else if (k === 'text') n.textContent = v;
+    else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
+    else if (v !== undefined && v !== null && v !== false) n.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids) if (c) n.append(c);
+  return n;
+};
+const localize = (label) => label.replace(/Player names, genitive \(Serbian only\)|Player names|Card ranks|Intro|Section|heading|item|Step/g, (m) => LABELS[m] ?? m);
+
+let entries = [];
+const rows = new Map();       // id -> {entry, node, sr, en, note, chg, base}
+let edits = new Map();        // id -> stored edit
+let activeGroup = 'all';
+let saving = Promise.resolve(); // writes go out one at a time, each with the whole set
+let pendingWrites = 0;
+
+function setSaveState(text, err = false) {
+  const s = $('#save-state');
+  s.textContent = text;
+  s.classList.toggle('err', err);
+}
+
+function current(row) {
+  return { sr: row.sr.value, en: row.en.value, note: row.note.value.trim() };
+}
+function isChanged(row) {
+  const c = current(row);
+  return c.sr !== row.base.sr || c.en !== row.base.en || c.note !== '';
+}
+
+function paint(row) {
+  const c = current(row);
+  row.sr.classList.toggle('dirty', c.sr !== row.base.sr);
+  row.en.classList.toggle('dirty', c.en !== row.base.en);
+  const changed = isChanged(row);
+  row.node.classList.toggle('changed', changed);
+  row.chg.hidden = !changed;
+}
+
+function updateStats() {
+  const changed = [...rows.values()].filter(isChanged).length;
+  const missing = entries.filter((e) => !e.sr || !e.en).length;
+  $('#stats').innerHTML = '';
+  $('#stats').append(`${entries.length} tekstova · `, el('b', { text: `${changed} ${changed === 1 ? 'izmena' : changed >= 2 && changed <= 4 ? 'izmene' : 'izmena'}` }), ` · ${missing} bez prevoda`);
+}
+
+function editBody(row) {
+  const c = current(row);
+  const e = row.entry;
+  return {
+    id: e.id,
+    label: e.label,
+    file: e.file,
+    line: e.line,
+    sr: c.sr,
+    en: c.en,
+    note: c.note,
+    baseSr: row.base.sr,
+    baseEn: row.base.en,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function persist(row) {
+  const id = row.entry.id;
+  if (isChanged(row)) edits.set(id, editBody(row)); else edits.delete(id);
+  pendingWrites++;
+  setSaveState('Čuvam…');
+  saving = saving
+    .then(async () => {
+      const res = await fetch('/__texts/edits', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.fromEntries(edits)) });
+      if (!res.ok) throw new Error(String(res.status));
+      if (--pendingWrites === 0) setSaveState('Sve izmene su sačuvane');
+    })
+    .catch(() => { pendingWrites--; setSaveState('Čuvanje nije uspelo: da li radi npm run dev?', true); });
+}
+
+const timers = new Map();
+function schedule(row, now = false) {
+  paint(row);
+  updateStats();
+  clearTimeout(timers.get(row.entry.id));
+  if (now) persist(row);
+  else timers.set(row.entry.id, setTimeout(() => persist(row), 700));
+}
+
+function field(row, lang, kind) {
+  const base = row.base[lang];
+  const id = `t-${row.entry.id}-${lang}`;
+  const ta = el('textarea', { id, class: kind === 'code' ? 'code' : '', rows: 1, spellcheck: 'true', lang: lang === 'sr' ? 'sr-Latn' : 'en', placeholder: base ? '' : 'Nema teksta: upiši prevod ako treba' });
+  ta.value = base;
+  ta.addEventListener('input', () => schedule(row));
+  ta.addEventListener('blur', () => { if (timers.has(row.entry.id)) schedule(row, true); });
+  const reset = el('button', { type: 'button', text: 'vrati', title: 'Vrati originalni tekst', onclick: () => { ta.value = base; schedule(row, true); } });
+  const wrap = el('div', { class: 'field' }, el('label', { for: id }, lang === 'sr' ? 'Srpski' : 'English', reset));
+  wrap.append(ta);
+  return { wrap, ta };
+}
+
+function buildRow(e) {
+  const row = { entry: e, base: { sr: e.sr ?? '', en: e.en ?? '' } };
+  const kindPill = e.kind === 'template' ? el('span', { class: 'pill tpl', text: 'šablon' }) : e.kind === 'code' ? el('span', { class: 'pill code', text: 'sa logikom' }) : null;
+  const miss = !e.sr || !e.en ? el('span', { class: 'pill miss', text: !e.sr ? 'nema srpskog' : 'nema engleskog' }) : null;
+  row.chg = el('span', { class: 'pill chg', text: 'izmenjeno' });
+  row.chg.hidden = true;
+  const meta = el('div', { class: 'meta' }, el('span', { class: 'key', text: localize(e.label) }), kindPill, miss, row.chg, el('span', { class: 'loc', text: `${e.file.split('/').pop()}:${e.line}` }));
+  const hintText = e.kind === 'code' ? 'Ovaj tekst se menja zavisno od toga ko igra. Menjaj samo reči pod navodnicima, ili opiši u napomeni šta želiš.' : (HINTS[e.hint] ?? e.hint);
+  const hint = hintText ? el('p', { class: 'hint', text: hintText }) : null;
+  const sr = field(row, 'sr', e.kind);
+  const en = field(row, 'en', e.kind);
+  row.sr = sr.ta; row.en = en.ta;
+  row.note = el('input', { class: 'note', id: `n-${e.id}`, type: 'text', placeholder: 'Napomena za Claude-a (nije obavezno)', 'aria-label': 'Napomena' });
+  row.note.addEventListener('input', () => schedule(row));
+  row.note.addEventListener('blur', () => { if (timers.has(e.id)) schedule(row, true); });
+  row.node = el('div', { class: 'row', 'data-group': e.group }, meta, hint, el('div', { class: 'cols' }, sr.wrap, en.wrap), row.note);
+  row.search = `${e.id} ${e.label} ${e.sr ?? ''} ${e.en ?? ''}`.toLowerCase();
+  rows.set(e.id, row);
+  return row;
+}
+
+function applyEdits() {
+  for (const row of rows.values()) {
+    const ed = edits.get(row.entry.id);
+    const active = document.activeElement;
+    for (const lang of ['sr', 'en']) {
+      const ta = row[lang];
+      if (ta === active) continue;
+      ta.value = ed ? ed[lang] ?? row.base[lang] : row.base[lang];
+    }
+    if (row.note !== active) row.note.value = ed?.note ?? '';
+    paint(row);
+  }
+  updateStats();
+  filter();
+}
+
+function filter() {
+  const q = $('#q').value.trim().toLowerCase();
+  const onlyChanged = $('#only-changed').checked;
+  const onlyMissing = $('#only-missing').checked;
+  let shown = 0;
+  for (const sec of document.querySelectorAll('section.group')) {
+    let any = false;
+    for (const node of sec.querySelectorAll('.row')) {
+      const row = rows.get(node.dataset.id);
+      const ok = (activeGroup === 'all' || row.entry.group === activeGroup)
+        && (!q || row.search.includes(q) || row.sr.value.toLowerCase().includes(q) || row.en.value.toLowerCase().includes(q))
+        && (!onlyChanged || isChanged(row))
+        && (!onlyMissing || !row.entry.sr || !row.entry.en);
+      node.hidden = !ok;
+      if (ok) { any = true; shown++; }
+    }
+    sec.hidden = !any;
+  }
+  $('#none').hidden = shown > 0;
+}
+
+function render(data) {
+  entries = data.entries;
+  const order = Object.keys(GROUPS);
+  const groups = [...new Set(entries.map((e) => e.group))].sort((a, b) => (order.indexOf(a) + 99) % 99 - (order.indexOf(b) + 99) % 99);
+  const list = $('#list');
+  list.innerHTML = '';
+  for (const g of groups) {
+    const box = el('div', { class: 'list' });
+    for (const e of entries.filter((x) => x.group === g)) {
+      const row = buildRow(e);
+      row.node.dataset.id = e.id;
+      box.append(row.node);
+    }
+    list.append(el('section', { class: 'group' }, el('h2', { text: GROUPS[g] ?? g }), box));
+  }
+  list.append(el('div', { class: 'empty', id: 'none', hidden: true, text: 'Nijedan tekst ne odgovara filteru.' }));
+
+  const chips = $('#chips');
+  const chip = (key, label, n) => el('button', { type: 'button', class: 'chip', 'aria-pressed': String(activeGroup === key), onclick: () => { activeGroup = key; for (const c of chips.children) c.setAttribute('aria-pressed', String(c.dataset.key === key)); filter(); } }, label, el('span', { class: 'n', text: String(n) }));
+  const all = chip('all', 'Sve', entries.length); all.dataset.key = 'all'; chips.append(all);
+  for (const g of groups) { const c = chip(g, GROUPS[g] ?? g, entries.filter((e) => e.group === g).length); c.dataset.key = g; chips.append(c); }
+  updateStats();
+}
+
+async function copyEdits() {
+  const out = [...edits.values()].map(({ id, file, line, sr, en, note, baseSr, baseEn }) => ({ id, file, line, ...(sr !== baseSr && { sr }), ...(en !== baseEn && { en }), ...(note && { note }) }));
+  const text = JSON.stringify(out, null, 1);
+  const btn = $('#copy');
+  try {
+    await navigator.clipboard.writeText(text);
+    btn.textContent = `Kopirano (${out.length})`;
+  } catch {
+    btn.textContent = 'Kopiranje nije uspelo';
+  }
+  setTimeout(() => { btn.textContent = 'Kopiraj izmene'; }, 2000);
+}
+
+$('#q').addEventListener('input', filter);
+$('#only-changed').addEventListener('change', filter);
+$('#only-missing').addEventListener('change', filter);
+$('#copy').addEventListener('click', copyEdits);
+
+async function start() {
+  let data;
+  try {
+    const res = await fetch('/__texts');
+    if (!res.ok) throw new Error(String(res.status));
+    data = await res.json();
+  } catch {
+    $('#offline').hidden = false;
+    $('#list').innerHTML = '<div class="empty">Tekstovi nisu mogli da se učitaju.</div>';
+    $('#stats').textContent = '';
+    return;
+  }
+  render(data);
+  edits = new Map(Object.entries(data.edits ?? {}));
+  applyEdits();
+  setSaveState(edits.size ? 'Učitane ranije izmene' : '');
+}
+start();
+</script>
+</body>
+</html>

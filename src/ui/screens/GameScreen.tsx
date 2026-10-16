@@ -24,8 +24,11 @@ interface GameScreenProps {
   onNewGame: () => void;
 }
 
-/** How long the mover keeps seeing the table (and their new card) before the hot-seat hand-off. */
-const HAND_OFF_DELAY_MS = 1100;
+/**
+ * How long the mover keeps seeing the table before the hot-seat hand-off: long enough for the drawn
+ * card to leave the deck, fly in and be shown off (useArrivals, Card).
+ */
+const HAND_OFF_DELAY_MS = 2300;
 /** Let the final move and claims sink in before the result is announced. */
 const RESULT_DELAY_MS = FAST ? 300 : 1600;
 /** A claim's chime follows the sound of the card being placed. */
@@ -79,6 +82,7 @@ export function GameScreen({ session, onMenu, onRules, onNewGame }: GameScreenPr
     dealing,
     pendingCards: pendingMine,
     outgoing,
+    drawn,
   } = useArrivals(arrivals, arrivalKey, () => setOpeningDealt(true));
   // Cards still flying in can't be played yet.
   const canPlay = humanToMove && pending.length === 0;
@@ -261,6 +265,7 @@ export function GameScreen({ session, onMenu, onRules, onNewGame }: GameScreenPr
                   cards={view.hand.filter((c) => !pendingMine.has(c))}
                   selected={selection}
                   enabled={canPlay}
+                  drawn={drawn}
                   onSelect={(c) => {
                     if (c !== null) playSfx('select');
                     setSelected(c);

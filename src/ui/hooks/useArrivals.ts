@@ -6,8 +6,8 @@ import { FAST } from './useGame.ts';
 /** One of the viewer's cards on its way from the deck to their hand (opening = the first deal). */
 export type Arrival = { card: CardId; opening: boolean };
 
-/** Pause before each drawn card leaves the deck. */
-const DRAW_STEP_MS = 80;
+/** A drawn card waits on the deck until the card just played has landed, then leaves. */
+const DRAW_STEP_MS = FAST ? 30 : 420;
 /** The opening hand is dealt more slowly, one card at a time. */
 const OPENING_DEAL_STEP_MS = FAST ? 30 : 260;
 
@@ -48,5 +48,7 @@ export function useArrivals(arrivals: Arrival[], key: string, onOpeningDealt?: (
     pendingCards: new Set(pending.map((a) => a.card)),
     /** layoutIds for the Deck's outgoing cards. */
     outgoing: pending.map(arrivalLayoutId),
+    /** The drawn card (not the opening deal) once it has left the deck: the hand shows it off. */
+    drawn: arrivals.slice(0, revealed).findLast((a) => !a.opening)?.card ?? null,
   };
 }

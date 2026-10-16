@@ -12,6 +12,8 @@ interface HandProps {
   allowed?: CardId | null;
   /** Tutorial: the card to point at. */
   spotlight?: CardId | null;
+  /** The card just drawn from the deck, shown off as it arrives. */
+  drawn?: CardId | null;
 }
 
 /**
@@ -25,6 +27,7 @@ export function Hand({
   onSelect,
   allowed = null,
   spotlight = null,
+  drawn = null,
 }: HandProps) {
   const { t } = useI18n();
   const ref = useRef<HTMLDivElement>(null);
@@ -57,6 +60,7 @@ export function Hand({
           tabIndex={i === focusIndex ? 0 : -1}
           onKeyDown={(e) => onKeyDown(e, i)}
           spotlight={c === spotlight}
+          drawn={c === drawn}
           dimmed={allowed !== null && c !== allowed}
           onSelect={() =>
             enabled && (allowed === null || allowed === c) && onSelect(c === selected ? null : c)

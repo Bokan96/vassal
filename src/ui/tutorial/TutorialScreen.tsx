@@ -105,7 +105,7 @@ export function TutorialScreen({ onExit }: TutorialScreenProps) {
     : lastEvents.flatMap((e) =>
         e.t === 'drew' && e.p === 0 && e.card !== null ? [{ card: e.card, opening: false }] : [],
       );
-  const { pending, pendingCards, outgoing } = useArrivals(
+  const { pending, pendingCards, outgoing, drawn } = useArrivals(
     arrivals,
     openingDealt ? `move-${moves}` : 'opening',
     () => setOpeningDealt(true),
@@ -249,6 +249,7 @@ export function TutorialScreen({ onExit }: TutorialScreenProps) {
                 enabled={canPlay}
                 allowed={expected?.card ?? (openingDealt ? -1 : null)}
                 spotlight={focus.card ?? null}
+                drawn={drawn}
                 onSelect={(c) => {
                   if (c !== null) playSfx('select');
                   setSelected(c);
